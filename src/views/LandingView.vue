@@ -1,4 +1,5 @@
 <template>
+  <div class="outer">
   <div class="main-container">
     <!-- Header with enhanced visual appeal -->
     <header class="header">
@@ -65,11 +66,11 @@
     <section class="cta-section">
       <div class="cta-content">
         <h2>What are you waiting for?</h2>
-        <button class="btn btn-signup">Sign Up</button>
+        <button class="btn btn-signup" @click = "router.push('/signup')">Sign Up</button>
         
         <div class="login-prompt">
           <p>Already have an account?</p>
-          <button class="btn btn-login">Login</button>
+          <button class="btn btn-login" @click = "router.push('/login')">Login</button>
         </div>
       </div>
       
@@ -81,14 +82,19 @@
       </div>
     </section>
   </div>
+</div>
 </template>
 
 <script setup>
 // Import Vue and Font Awesome components
-import { ref, onMounted } from 'vue';
+import { ref, onMounted} from 'vue';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faCheckCircle, faExchangeAlt, faShieldAlt } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { useRouter } from 'vue-router'
+
+const router = useRouter();
+
 
 // Add icons to the library
 library.add(faCheckCircle, faExchangeAlt, faShieldAlt);
@@ -134,64 +140,35 @@ onMounted(() => {
 });
 </script>
 
-<style>
+<style scoped >
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Poppins:wght@300;400;500;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Poppins:wght@300;400;500;700&family=Nunito:wght@300;400;600&display=swap');
 
-:root {
-  --dark-blue: #00072D;
-  --navy: #001C55;
-  --blue: #0A2472;
-  --light-blue: #0E6BA8;
-  --pale-blue: #A6E1FA;
-  --bg-color: rgb(191, 191, 245);
-}
 
+html, body{
+  height:100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
-  padding: 0;
-  font-family: 'Poppins', sans-serif;
-  color: var(--dark-blue);
-  line-height: 1.6;
-  background: linear-gradient(135deg, #e0e0ff 0%, rgb(191, 191, 245) 100%);
-  position: relative;
-  overflow-x: hidden;
+
+
+
+
+.outer{
+  height:100%;
+  width: 100%;
+  padding:0;
+  margin:0;
+  background: linear-gradient(135deg, #e0e0ff, rgb(53, 99, 121), #d4d4ff);
 }
 
-body::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: -1;
-  background: 
-    radial-gradient(circle at 20% 20%, rgba(166, 225, 250, 0.4) 0%, transparent 25%),
-    radial-gradient(circle at 80% 50%, rgba(14, 107, 168, 0.2) 0%, transparent 30%),
-    radial-gradient(circle at 40% 80%, rgba(10, 36, 114, 0.15) 0%, transparent 35%);
-  animation: pulse 15s infinite alternate ease-in-out;
-}
-
-body::after {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: -2;
-  opacity: 0.6;
-  background: 
-    url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%230a2472' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E"),
-    linear-gradient(135deg, rgba(166, 225, 250, 0.1) 0%, rgba(14, 107, 168, 0.1) 100%);
-}
 
 .main-container {
   max-width: 1200px;
@@ -200,6 +177,13 @@ body::after {
   position: relative;
   overflow: hidden; /* Add this to contain the bubbles */
   min-height: 100vh; /* Ensure container has enough height for bubbles */
+  --dark-blue: #00072D;
+  --navy: #001C55;
+  --blue: #0A2472;
+  --light-blue: #0E6BA8;
+  --pale-blue: #A6E1FA;
+  --bg-color: rgb(191, 191, 245);
+  
 }
 
 /* Enhanced Header styles */
