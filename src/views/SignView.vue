@@ -2,34 +2,34 @@
   <div class="outer">
     <div class="form-container">
       <h1 class="form-header">Sign Up</h1>
-      <form class="signup-form">
+      <form class="signup-form" @submit.prevent = "addUser">
         <div class="form-group">
           <label for="username">Username</label>
-          <input type="text" id="username" placeholder="Enter your username" required />
+          <input type="text" id="username" v-model="username" placeholder="Enter your username" minlength="5" required />
         </div>
         <div class="form-group">
           <label for="name">Name</label>
-          <input type="text" id="name" placeholder="Enter your full name" required />
+          <input type="text" id="name" v-model="name" placeholder="Enter your full name" required />
         </div>
         <div class="form-group">
           <label for="email">Email</label>
-          <input type="email" id="email" placeholder="Enter your email" required />
+          <input type="email" id="email" v-model="email" placeholder="Enter your email" required />
         </div>
         <div class="form-group">
           <label for="password">Password</label>
-          <input type="password" id="password" placeholder="Enter your password" required />
+          <input type="password" id="password" v-model="password" placeholder="Enter your password" minlength="6" required />
         </div>
         <div class="form-group">
           <label for="confirm-password">Confirm Password</label>
-          <input type="password" id="confirm-password" placeholder="Confirm your password" required />
+          <input type="password" id="confirm-password" v-model="confpassword" placeholder="Confirm your password" minlength="6" :pattern="password" required/>
         </div>
         <div class="form-group">
           <label for="date">Date of Birth</label>
-          <input type="date" id="date" required />
+          <input type="date" id="date" v-model="date" required />
         </div>
         <div class="form-group">
           <label for="gender">Gender</label>
-          <select id="gender" required>
+          <select id="gender" v-model="gender" required>
             <option value="" disabled selected>Select your gender</option>
             <option value="male">Male</option>
             <option value="female">Female</option>
@@ -46,10 +46,91 @@
 <script setup>
 // Import Vue Router
 import { useRouter } from 'vue-router';
+import {ref} from 'vue'
+import {db , auth} from '@/Firebase/config'
+//Variables:
+
+const username = ref("")
+const name = ref("")
+const email = ref("")
+const password = ref("")
+const confpassword = ref("")
+const date = ref("")
+const gender = ref(null)
+
 
 
 const router = useRouter();
+
+
+
+
+
+//Functions:
+
+const addUser = async () =>{
+  try{
+    const usersTable = db.collection("users");
+    const querySnapshot = await usersTable.where('username' , '==' , username.value ).get();
+    console.log(querySnapshot.empty);
+    if (!querySnapshot.empty){
+      alert("Username is already taken.")
+      username.value = ""
+      return false;
+    }
+  }
+  
+  catch(error){
+    alert("Connection error, please try again!")
+    return false;
+
+  }
+
+  try{
+  
+    const userCredential = await auth.createUserWithEmailAndPassword(email.value , password.value);
+    const user = userCredential.user
+    await db.collection("users").doc(user.uid).set({
+      username: username.value,
+      name : name.value,
+      email : email.value,
+      birthday : date.value,
+      gender : gender.value
+    })
+
+    
+  }
+
+  catch(error){
+    alert("Email is already taken! Use a different one.");
+    email.value = ''
+    return false;
+
+  }
+
+  try {
+    await auth.currentUser.sendEmailVerification();
+
+  }
+  catch(error){
+    alert("Account Created Successfully!, Try Logging In To Get A Verification Email!");
+  }
+  finally{
+    alert("Account Created Successfully!, A verification email has been sent, Check your inbox.");
+    username.value = ''
+    name.value = ''
+    email.value = ''
+    password.value = ''
+    date.value = ''
+    gender.value = ''
+  }
+
+
+}
 </script>
+
+
+
 
 
 
@@ -153,4 +234,6 @@ select:focus {
 .switch-btn:hover {
   color: #0056b3;
 }
+
+
 </style>

@@ -4,11 +4,11 @@
         <div class="login-view" v-if = "!isReset">
           <h1>Login</h1>
           <form class="form">
-            <input type="email" placeholder="Email" required />
-            <input type="password" placeholder="Password" required />
-            <button type="submit" class="btn">Login</button>
+            <input type="email" placeholder="Email" required v-model = "email" />
+            <input type="password" placeholder="Password" required v-model="password" />
+            <button type="submit" class="btn" @click = "login">Login</button>
           </form>
-          <button class="switch-btn" @click = "isReset = !isReset ">Forgot Password?</button>
+          <button class="switch-btn" @click = "isReset = !isReset">Forgot Password?</button>
           <button class="switch-btn" @click = "router.push('/signup')">Don't have an account? Sign Up!</button>
           
         </div>
@@ -16,8 +16,8 @@
         <div class="reset-view" v-else >
           <h1>Reset Password</h1>
           <form class="form">
-            <input type="email" placeholder="Email" required />
-            <button type="submit" class="btn">Send Reset Link</button>
+            <input type="email" placeholder="Email" required v-model="email" />
+            <button type="submit" class="btn" @click="sendReset">Send Reset Link</button>
           </form>
           <button class="switch-btn" @click = "isReset = !isReset">Back to Login</button>
         </div>
@@ -30,14 +30,17 @@
 <script setup>
     //Imports:
     import { onMounted , ref} from 'vue';
-    import {useRouter} from 'vue-router'
+    import {useRouter} from 'vue-router';
+    import {db , auth} from '@/Firebase/config'
 
 
 
     // Variables:
     const router = useRouter()
     const isReset = ref(false);
-    
+    const user = auth.currentUser;
+    const email = ref("")
+    const password = ref("")
 
 
 
@@ -45,6 +48,63 @@
 
 
     // Functions:
+    const sendReset = async () =>{
+      try{
+        await auth.sendPasswordResetEmail(email.value);
+    }
+      catch(error){
+        alert("Enter a valid email, or verify your connection.");
+        return false
+    }
+      finally{
+        alert("A password reset email has been sent to " + email.value + ". Check your inbox!")
+        isReset.value = !isReset.value
+        return true;
+    }
+    
+    }
+
+
+
+
+    const login = async () => {
+      try{
+          console.log(email.value)
+          const Credentials = await auth.signInWithEmailAndPassword(email.value , password.value);
+          console.log("I got here")
+          const user = Credentials.user
+          if (user.emailVerified){
+            alert("You are successfully logged in!")
+          }
+          else{
+            await user.sendEmailVerification();
+            await auth.signOut();
+            alert("Please verify your email before logging in. Check your inbox for the verification email.");
+            return false;
+          }
+
+      }
+
+      catch(error){
+          if (error.code == "auth/internal-error"){
+            alert("Invalid Credentials.")
+            return false;
+          }
+          else if (error.code == "auth/network-request-failed"){
+            alert("Verify Your Connection.")
+            return false;
+          }
+
+      }
+
+      finally{
+        router.push('/home')
+        
+      }
+      
+    }
+
+    
 
 
     onMounted(() =>{
