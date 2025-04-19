@@ -26,7 +26,7 @@
             </div>
             <!-- Other nav items remain the same -->
             <div class="nav-item">
-                <button class="nav-button" :class="{ active: activeButton === 'community' }" @click="setActiveButton('community') ; router.push({name: 'community' , params : {id :auth.currentUser.uid} })">
+                <button class="nav-button" :class="{ active: activeButton === 'community' }" @click="setActiveButton('community') ; router.push({name: 'community'})">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                         class="nav-icon">
@@ -38,7 +38,7 @@
                 </button>
             </div>
             <div class="nav-item">
-                <button class="nav-button" :class="{ active: activeButton === 'chat' }" @click="setActiveButton('chat') ; router.push({name : 'private' , params : {id : auth.currentUser.uid} }) ">
+                <button class="nav-button" :class="{ active: activeButton === 'chat' }" @click="setActiveButton('chat') ; router.push({name : 'private'}) ">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                         class="nav-icon">
@@ -60,12 +60,12 @@
 
 <script setup>
 import { db, auth } from '@/Firebase/config'
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch} from 'vue';
 import { useRouter } from 'vue-router';
 
 // Variables
 const img = ref("");
-const activeButton = ref(null);
+const activeButton = ref("chat");
 const showDropdown = ref(false);
 const router = useRouter()
 
@@ -75,17 +75,6 @@ const setActiveButton = (buttonName) => {
     if (showDropdown.value ) showDropdown.value = !showDropdown.value
 };
 
-const activateCreate = (buttonName) => {
-    activeButton.value = buttonName; 
-};
-
-const createButton = () =>{
-    activeButton.value = 'none';
-    showDropdown.value = !showDropdown.value
-}
-
-
-
 const createCommunity = () => {
     activeButton.value = 'create'
     console.log("Creating community...");
@@ -93,11 +82,32 @@ const createCommunity = () => {
     showDropdown.value = false;
 };
 
+watch(
+  () => router.currentRoute.value,
+  (to) => {
+    // set the class of the active button accordingly
+    if (to.name === 'community') {
+        activeButton.value = 'community';
+    } else if (to.name === 'private') {
+        activeButton.value = 'chat';
+    } else if (to.name === 'createcommunity' || to.name === 'creategroup') {
+        activeButton.value = 'create';
+    }
+    else {
+        activeButton.value = '';
+    }
+  }
+  ,{immediate: true}
+)
+
+
 const createPrivateGroup = () => {
     console.log("Creating private group chat...");
     // Add your private group creation logic here
     showDropdown.value = false;
 };
+
+
 
 onMounted(async () => {
     auth.onAuthStateChanged(async (user) => {
@@ -169,7 +179,6 @@ onMounted(async () => {
 }
 
 .navbar {
-    position: fixed;
     top: 0;
     left: 0;
     height: 100vh;
@@ -180,7 +189,6 @@ onMounted(async () => {
     justify-content: space-between;
     align-items: center;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
 }
 
 .nav-top {

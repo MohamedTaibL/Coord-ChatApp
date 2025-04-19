@@ -21,20 +21,14 @@ const routes = [
     component : () => import('../views/LogView.vue')
   },
   {
-    path :'/home',
-    name : 'home',
-    component : () => import('../views/HomeView.vue')
-  },
-  {
-    path : '/community/:id',
+    path : '/community/:id?',
     name : 'community',
     component : () => import('@/views/CommunityChatView.vue')
   },
   {
-    path: '/private/:id',
+    path: '/private/:id?',
     name : 'private',
     component : () => import('@/views/PrivateChatView.vue')
-    
   },
   {
     path: '/createcommunity',
