@@ -3,10 +3,10 @@
       <div class="form-container">
         <div class="login-view" v-if = "!isReset">
           <h1>Login</h1>
-          <form class="form">
+          <form class="form" @submit.prevent = "login">
             <input type="email" placeholder="Email" required v-model = "email" />
             <input type="password" placeholder="Password" required v-model="password" />
-            <button type="submit" class="btn" @click = "login">Login</button>
+            <button type="submit" class="btn" >Login</button>
           </form>
           <button class="switch-btn" @click = "isReset = !isReset">Forgot Password?</button>
           <button class="switch-btn" @click = "router.push('/signup')">Don't have an account? Sign Up!</button>
@@ -75,6 +75,8 @@
           const user = Credentials.user
           if (user.emailVerified){
             alert("You are successfully logged in!")
+            router.push('/home')
+
           }
           else{
             await user.sendEmailVerification();
@@ -97,11 +99,6 @@
 
       }
 
-      finally{
-        router.push('/home')
-    
-        
-      }
       
     }
 
