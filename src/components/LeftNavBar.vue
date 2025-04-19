@@ -1,7 +1,9 @@
 <template>
     <div class="navbar">
         <div class="nav-top">
-            <!-- Empty space to push the middle section down -->
+            <div class="nav-item">
+                <img src="../imgs/coord_logo.png" alt="Profile Image" class="profile-image" style="width: 40px; height: 40px;">
+            </div>
         </div>
         <div class="nav-middle">
             <div class="nav-item">
