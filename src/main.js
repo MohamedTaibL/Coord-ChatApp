@@ -12,7 +12,9 @@ auth.onAuthStateChanged((state) => {
       app.mount('#app')
     }
     if(!state) {
-      router.push({ name: 'sign' })
+        const names = ['login' , 'signup' , 'landing']
+        if (!names.includes(router.currentRoute.value.name)){
+            router.push("/")
+        }
     }
-  });
-
+});

@@ -1,64 +1,174 @@
 <template>
     <div class="navbar">
-      <div class="nav-top">
-        <!-- Empty space to push the middle section down -->
-      </div>
-      <div class="nav-middle">
-        <div class="nav-item">
-          <button class="nav-button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-          </button>
+        <div class="nav-top">
+            <!-- Empty space to push the middle section down -->
         </div>
-        <div class="nav-item">
-          <button class="nav-button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-            </svg>
-          </button>
+        <div class="nav-middle">
+            <div class="nav-item">
+                <div class="dropdown-container">
+                    <button class="nav-button" @click = 'showDropdown =!showDropdown':class="{ active: activeButton === 'create' }">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="nav-icon">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </button>
+                    <div class="dropdown-menu" v-if="showDropdown">
+                        <button class="dropdown-item" @click="createCommunity">
+                            Create Community
+                        </button>
+                        <button class="dropdown-item" @click="createPrivateGroup">
+                            Create Private Group Chat
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Other nav items remain the same -->
+            <div class="nav-item">
+                <button class="nav-button" :class="{ active: activeButton === 'community' }" @click="setActiveButton('community') ; router.push({name: 'community' , params : {id :auth.currentUser.uid} })">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="nav-icon">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="nav-item">
+                <button class="nav-button" :class="{ active: activeButton === 'chat' }" @click="setActiveButton('chat') ; router.push({name : 'private' , params : {id : auth.currentUser.uid} }) ">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="nav-icon">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                </button>
+            </div>
         </div>
-        <div class="nav-item">
-          <button class="nav-button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
-          </button>
+        <div class="nav-bottom">
+            <div class="nav-item">
+                <button class="nav-button profile">
+                    <img :src="img" alt="Profile" class="profile-img" v-if="img">                    
+                    <div class="loading-spinner" v-else></div>
+                </button>
+            </div>
         </div>
-      </div>
-      <div class="nav-bottom">
-        <div class="nav-item">
-          <button class="nav-button profile">
-            <img :src="img" alt="Profile" class="profile-img">
-          </button>
-        </div>
-      </div>
     </div>
-  </template>
-  
-  <script setup>
-  import { db, auth } from '@/Firebase/config'
-  import { onMounted, ref } from 'vue';
-  
-  // Variables
-  const img = ref("")
-  const userid = auth.currentUser.uid
-  
-  // Functions
-  onMounted(async () => {
-    const userRef = await db.collection("users").doc(userid).get()
-    const userInfo = userRef.data()
-    console.log(userInfo)
-    img.value = userInfo.imgURL
-  })
-  </script>
-  
-  <style scoped>
-  .navbar {
+</template>
+
+<script setup>
+import { db, auth } from '@/Firebase/config'
+import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+
+// Variables
+const img = ref("");
+const activeButton = ref(null);
+const showDropdown = ref(false);
+const router = useRouter()
+
+// Functions
+const setActiveButton = (buttonName) => {
+    activeButton.value = buttonName; 
+    if (showDropdown.value ) showDropdown.value = !showDropdown.value
+};
+
+const activateCreate = (buttonName) => {
+    activeButton.value = buttonName; 
+};
+
+const createButton = () =>{
+    activeButton.value = 'none';
+    showDropdown.value = !showDropdown.value
+}
+
+
+
+const createCommunity = () => {
+    activeButton.value = 'create'
+    console.log("Creating community...");
+    // Add your community creation logic here
+    showDropdown.value = false;
+};
+
+const createPrivateGroup = () => {
+    console.log("Creating private group chat...");
+    // Add your private group creation logic here
+    showDropdown.value = false;
+};
+
+onMounted(async () => {
+    auth.onAuthStateChanged(async (user) => {
+        if(user){
+            if (user.uid) {
+                const userRef = await db.collection("users").doc(user.uid).get()
+                const userInfo = userRef.data()
+                console.log(userInfo)
+                img.value = userInfo.imgURL
+                console.log(img.value)
+            }}
+        }
+    )
+})
+</script>
+
+<style scoped>
+/* Existing styles remain the same */
+
+.dropdown-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+}
+
+.dropdown-menu {
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: #0A2472;
+    border-radius: 8px;
+    padding: 8px 0;
+    min-width: 180px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1001;
+}
+
+.dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 8px 16px;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top: 3px solid white;
+    border-right: 3px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 8px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.navbar {
     position: fixed;
     top: 0;
     left: 0;
@@ -71,36 +181,36 @@
     align-items: center;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
     z-index: 1000;
-  }
-  
-  .nav-top {
+}
+
+.nav-top {
     flex-grow: 1;
-  }
-  
-  .nav-middle {
+}
+
+.nav-middle {
     display: flex;
     flex-direction: column;
     align-items: center;
     width: 100%;
-  }
-  
-  .nav-bottom {
+}
+
+.nav-bottom {
     padding-bottom: 20px;
     width: 100%;
     display: flex;
     justify-content: center;
     flex-grow: 1;
     align-items: flex-end;
-  }
-  
-  .nav-item {
+}
+
+.nav-item {
     margin: 12px 0;
     display: flex;
     justify-content: center;
     width: 100%;
-  }
-  
-  .nav-button {
+}
+
+.nav-button {
     background: transparent;
     border: none;
     border-radius: 8px;
@@ -111,18 +221,21 @@
     display: flex;
     justify-content: center;
     align-items: center;
-  }
-  
-  .nav-button:hover {
+}
+
+.nav-button:hover{
     background-color: rgba(255, 255, 255, 0.1);
-  }
-  
-  .nav-icon {
+}
+.nav-button.active {
+    background-color: rgba(136, 15, 15, 0.898);
+}
+
+.nav-icon {
     width: 22px;
     height: 22px;
-  }
-  
-  .profile {
+}
+
+.profile {
     position: relative;
     width: 40px;
     height: 40px;
@@ -130,11 +243,11 @@
     overflow: hidden;
     border-radius: 50%;
     border: 2px solid #fff;
-  }
-  
-  .profile-img {
+}
+
+.profile-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-  }
-  </style>
+}
+</style>
