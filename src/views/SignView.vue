@@ -90,12 +90,17 @@ const addUser = async () =>{
   
     const userCredential = await auth.createUserWithEmailAndPassword(email.value , password.value);
     const user = userCredential.user
+    const imgURL = (gender.value === "male") 
+  ? "https://img.freepik.com/premium-vector/vector-flat-illustration-gray-color-avatar-user-profile-person-icon-profile-picture-suitable-social-media-profiles-icons-screensavers-as-templatex9xa_719432-1101.jpg?w=740" 
+  : "https://img.freepik.com/premium-vector/vector-flat-illustration-gray-color-avatar-user-profile-person-icon-profile-picture-suitable-social-media-profiles-icons-screensavers-as-templatex9xa_719432-943.jpg?w=740";
+
     await db.collection("users").doc(user.uid).set({
       username: username.value,
       name : name.value,
       email : email.value,
       birthday : date.value,
-      gender : gender.value
+      gender : gender.value,
+      imgURL : imgURL
     })
 
     
@@ -110,13 +115,14 @@ const addUser = async () =>{
 
   try {
     await auth.currentUser.sendEmailVerification();
+    alert("Account Created Successfully!, A verification email has been sent, Check your inbox.");
+
 
   }
   catch(error){
     alert("Account Created Successfully!, Try Logging In To Get A Verification Email!");
   }
   finally{
-    alert("Account Created Successfully!, A verification email has been sent, Check your inbox.");
     username.value = ''
     name.value = ''
     email.value = ''

@@ -1,3 +1,16 @@
 <template>
-    This should be the app's home view, the user should only access it if he is logged in ( still didn't make that change )
+    <LeftNavBar />
+    
 </template>
+
+
+
+<script setup>
+    import LeftNavBar from '@/components/LeftNavBar.vue'
+    import {db , auth} from '@/Firebase/config'
+    
+</script>
+
+
+
+
