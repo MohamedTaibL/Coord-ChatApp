@@ -1,5 +1,9 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import LandingView from '../views/LandingView.vue'
+import { auth, db } from '@/Firebase/config' // Adjust the path if needed
+
+// User state
+let isLoggedIn = false
 
 const routes = [
   {
@@ -10,46 +14,69 @@ const routes = [
   {
     path: '/signup',
     name: 'signup',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
-    component: () => import(/* webpackChunkName: "about" */ '../views/SignView.vue')
+    component: () => import('../views/SignView.vue')
   },
   {
-    path : '/login',
-    name : 'login',
-    component : () => import('../views/LogView.vue')
+    path: '/login',
+    name: 'login',
+    component: () => import('../views/LogView.vue')
   },
   {
-    path : '/community/:id?',
-    name : 'community',
-    component : () => import('@/views/CommunityChatView.vue')
+    path: '/community/:id?',
+    name: 'community',
+    component: () => import('@/views/CommunityChatView.vue')
   },
   {
     path: '/private/:id?',
-    name : 'private',
-    component : () => import('@/views/PrivateChatView.vue')
+    name: 'private',
+    component: () => import('@/views/PrivateChatView.vue')
   },
   {
     path: '/createcommunity',
-    name : 'createcommunity',
-    component : () => import('@/views/CreateCommunityView.vue')
+    name: 'createcommunity',
+    component: () => import('@/views/CreateCommunityView.vue')
   },
   {
     path: '/creategroup',
     name: 'creategroup',
-    component : () => import('@/views/CreateGroupView.vue')
+    component: () => import('@/views/CreateGroupView.vue')
   },
   {
-    path : '/viewprofile/:id',
-    name : 'viewprofile',
-    component : () => import('@/views/ProfileView.vue')
+    path: '/viewprofile/:id',
+    name: 'viewprofile',
+    component: () => import('@/views/ProfileView.vue')
   }
 ]
 
 const router = createRouter({
   history: createWebHashHistory(),
   routes
+})
+
+// Navigation guard
+router.beforeEach((to, from, next) => {
+  const publicPages = ['landing', 'signup', 'login']
+  const isPublic = publicPages.includes(to.name)
+
+  if (!isPublic) {
+    if (!isLoggedIn) {
+      next({ name: 'login' })
+    } else {
+      next()
+    }
+  } else {
+    // 🛠 Important: public route, always allow
+    next()
+  }
+})
+
+// Auth listener
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    isLoggedIn = true
+  } else {
+    isLoggedIn = false
+  }
 })
 
 export default router
