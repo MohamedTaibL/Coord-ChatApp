@@ -102,13 +102,44 @@ const createCommunity = () => {
     showDropdown.value = false;
 };
 
+watch(
+  () => router.currentRoute.value,
+  (to) => {
+    // set the class of the active button accordingly
+    if (to.name === 'community') {
+        activeButton.value = 'community';
+    } else if (to.name === 'private') {
+        activeButton.value = 'chat';
+    } else if (to.name === 'createcommunity' || to.name === 'creategroup') {
+        activeButton.value = 'create';
+    }
+    else {
+        activeButton.value = '';
+    }
+  }
+  ,{immediate: true}
+)
+
+
 const createPrivateGroup = () => {
     console.log("Creating private group chat...");
     // Add your private group creation logic here
+    router.push('/creategroup');
     showDropdown.value = false;
-};
-
-onMounted(async () => {
+  };
+  
+  const viewProfile = () => {
+    showProfileDropdown.value = false;
+    router.push({ name: 'viewprofile', params: { id: auth.currentUser.uid } });
+  };
+  
+  const signOut = async () => {
+    showProfileDropdown.value = false;
+    await auth.signOut();
+    router.push({ name: 'login' });
+  };
+  
+  onMounted(async () => {
     auth.onAuthStateChanged(async (user) => {
       if (user && user.uid) {
         const userRef = await db.collection("users").doc(user.uid).get();
@@ -177,7 +208,6 @@ onMounted(async () => {
 }
 
 .navbar {
-    position: fixed;
     top: 0;
     left: 0;
     height: 100vh;
@@ -188,7 +218,6 @@ onMounted(async () => {
     justify-content: space-between;
     align-items: center;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
 }
 
 .nav-top {
