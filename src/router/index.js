@@ -45,6 +45,11 @@ const routes = [
     path: '/creategroup',
     name: 'creategroup',
     component : () => import('@/views/CreateGroupView.vue')
+  },
+  {
+    path : '/viewprofile/:id',
+    name : 'viewprofile',
+    component : () => import('@/views/ProfileView.vue')
   }
 ]
 
