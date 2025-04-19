@@ -1,6 +1,6 @@
 <template>
-  <LeftNavBar v-if="boolean" />
-  <router-view />
+  <LeftNavBar v-if="boolean" class="NavBar"/>
+  <router-view class="router-view" />
 </template>
 
 <script setup>
@@ -37,18 +37,12 @@ onMounted(() =>{
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
+  display: flex;
+  flex-direction: row;
 }
 
-nav {
-  padding: 30px;
+.router-view {
+  flex: 2;
 }
 
-nav a {
-  font-weight: bold;
-  color: #2c3e50;
-}
-
-nav a.router-link-exact-active {
-  color: #42b983;
-}
 </style>
