@@ -1,83 +1,85 @@
 <template>
-    <form class="form-container">
-      <h2 class="form-title">Create New Private Group</h2>
-      
-      <div class="form-field">
-        <label for="name">Name: (Not required) </label>
-        <input type="text" id="name" v-model="formData.name" placeholder="Enter group name" required />
-      </div>
-  
-      <div class="form-field">
-        <label for="bio">Bio: (Not required) </label>
-        <textarea id="bio" v-model="formData.bio" placeholder="Write a short description" required></textarea>
-      </div>
-  
-      <div class="form-field user-selection">
-        <label>Add Users</label>
+  <div class="CreateGroupView">
+      <form class="form-container">
+        <h2 class="form-title">Create New Private Group</h2>
         
-        <!-- Search input and dropdown -->
-        <div class="search-container">
-          <input 
-            type="text" 
-            v-model="searchQuery" 
-            placeholder="Search users" 
-            @input="filterUsers" 
-          />
-          
-          <div class="dropdown" v-if="searchQuery && filteredUsers.length > 0">
-            <div class="dropdown-content">
-              <div 
-                v-for="user in filteredUsers" 
-                :key="user.username" 
-                class="user-item" 
-                @click="addUser(user)"
-              >
-                <img :src="user.imgURL || '/api/placeholder/40/40'" class="user-avatar" :alt="user.name" />
-                <div class="user-info">
-                  <div class="user-name">{{ user.name }}</div>
-                  <div class="user-username">@{{ user.username }}</div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div class="form-field">
+          <label for="name">Name: (Not required) </label>
+          <input type="text" id="name" v-model="formData.name" placeholder="Enter group name" required />
         </div>
-        
-        <!-- Selected users display -->
-        <div class="selected-users-container">
-          <h3>Selected Users</h3>
-          <div class="selected-users">
-            <div v-if="selectedUsers.length === 0" class="no-users">
-              No users selected
-            </div>
-            <div v-else class="users-list">
-              <div 
-                v-for="user in selectedUsers" 
-                :key="user.username" 
-                class="selected-user-item"
-              >
-                <div class="user-display">
+    
+        <div class="form-field">
+          <label for="bio">Bio: (Not required) </label>
+          <textarea id="bio" v-model="formData.bio" placeholder="Write a short description" required></textarea>
+        </div>
+    
+        <div class="form-field user-selection">
+          <label>Add Users</label>
+          
+          <!-- Search input and dropdown -->
+          <div class="search-container">
+            <input 
+              type="text" 
+              v-model="searchQuery" 
+              placeholder="Search users" 
+              @input="filterUsers" 
+            />
+            
+            <div class="dropdown" v-if="searchQuery && filteredUsers.length > 0">
+              <div class="dropdown-content">
+                <div 
+                  v-for="user in filteredUsers" 
+                  :key="user.username" 
+                  class="user-item" 
+                  @click="addUser(user)"
+                >
                   <img :src="user.imgURL || '/api/placeholder/40/40'" class="user-avatar" :alt="user.name" />
                   <div class="user-info">
                     <div class="user-name">{{ user.name }}</div>
                     <div class="user-username">@{{ user.username }}</div>
                   </div>
                 </div>
-                <button 
-                  type="button" 
-                  class="remove-btn" 
-                  @click="removeUser(user)"
-                  aria-label="Remove user"
+              </div>
+            </div>
+          </div>
+          
+          <!-- Selected users display -->
+          <div class="selected-users-container">
+            <h3>Selected Users</h3>
+            <div class="selected-users">
+              <div v-if="selectedUsers.length === 0" class="no-users">
+                No users selected
+              </div>
+              <div v-else class="users-list">
+                <div 
+                  v-for="user in selectedUsers" 
+                  :key="user.username" 
+                  class="selected-user-item"
                 >
-                  ✕
-                </button>
+                  <div class="user-display">
+                    <img :src="user.imgURL || '/api/placeholder/40/40'" class="user-avatar" :alt="user.name" />
+                    <div class="user-info">
+                      <div class="user-name">{{ user.name }}</div>
+                      <div class="user-username">@{{ user.username }}</div>
+                    </div>
+                  </div>
+                  <button 
+                    type="button" 
+                    class="remove-btn" 
+                    @click="removeUser(user)"
+                    aria-label="Remove user"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-      
-      <button type="submit" class="submit-btn">Create Group</button>
-    </form>
+        
+        <button type="submit" class="submit-btn">Create Group</button>
+      </form>
+  </div>
   </template>
   
   <script setup>

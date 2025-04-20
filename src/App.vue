@@ -39,10 +39,14 @@ onMounted(() =>{
   color: #2c3e50;
   display: flex;
   flex-direction: row;
+  height: 100vh;
+  overflow: hidden; /* Keep this to prevent global scrollbars */
 }
 
 .router-view {
   flex: 2;
+  overflow-y: auto; /* Allow vertical scrolling inside router-view */
+  overflow-x: hidden;
+  height: 100vh; /* Ensure full height for consistent scroll */
 }
-
 </style>

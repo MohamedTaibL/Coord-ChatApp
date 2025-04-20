@@ -201,7 +201,8 @@ const createPrivateGroup = () => {
 .navbar {
     top: 0;
     left: 0;
-    height: 100vh;
+    min-height: 100vh;
+    height: 100%;
     width: 72px;
     background-color: #0A2472;
     display: flex;
