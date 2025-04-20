@@ -8,7 +8,6 @@ let app;
 
 auth.onAuthStateChanged(user => {
 
-  console.log('User state changed', user);
   if (!app) {
     app = createApp(App);
     app.use(router);

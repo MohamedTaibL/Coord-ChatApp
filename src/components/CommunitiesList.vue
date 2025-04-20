@@ -1,11 +1,11 @@
 <template>
-  <div class="groups-list">
+<div class="communities-list">
     <Lister
-      :filter="filter"
-      :isGroup="true"
-      :isCommunity="false"
+    :filter="filter"
+    :isGroup="false"
+    :isCommunity="true"
     />
-  </div>
+</div>
 </template>
 
 <script setup>
@@ -14,8 +14,9 @@ defineProps(["filter"]);
 </script>
 
 <style scoped>
-  .messages-list{
+.messages-list{
     display: flex;
     flex-direction: column;
-  }
+}
 </style>
+  

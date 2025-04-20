@@ -17,15 +17,12 @@ const boolean = ref(false)
 watch(
   () => router.currentRoute.value,
   (to) => {
-    
     routername.value = to.name
-    console.log('Current route:', to.name)
     boolean.value = !restrictedRoutes.value.includes(to.name)
   },
 )
 
 onMounted(() =>{
-  console.log("i got remounted")
   boolean.value = restrictedRoutes.value.includes(router.currentRoute.value.name)
 })
 </script>

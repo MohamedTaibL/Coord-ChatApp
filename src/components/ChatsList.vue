@@ -1,10 +1,102 @@
 <template>
-  <div class="chats-list-main" v-if="!newChat">
-    <div class="chats-list-header">
-      <div class="main-header">{{ userName }}</div>
-      <div class="chats-settings">
-        <div class="new-chat-icon" @click="newChat = true">
-          <i class="fas fa-plus"></i>
+  <div class="ChatsListComp" v-if="route.name != 'community'">
+    <div class="chats-list-main" v-if="!newChat">
+      <div class="chats-list-header">
+        <div class="main-header">{{ userName }}</div>
+        <div class="chats-settings">
+          <div class="new-chat-icon" @click="newChat = true">
+            <i class="fas fa-plus"></i>
+          </div>
+          <div
+            class="filter-wrapper"
+            @mouseleave="startCloseTimer"
+            @mouseenter="clearCloseTimer"
+          >
+            <div class="filter-chat-icon" @click="toggleFilter">
+              <i class="fas fa-bars"></i>
+            </div>
+            <ChatsFilter
+              v-if="showFilterPopup"
+              :active="filters"
+              @filter="updateFilter"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="chats-list-body">
+        <div class="search-bar">
+          <input
+            type="text"
+            placeholder="Search..."
+            v-model="filter"
+            @click="
+              activePrivateMessage = true;
+              activeGroups = true;
+            "
+          />
+        </div>
+        <div class="chats-list-body-content">
+          <div class="current-filter">
+            {{ filters }}
+          </div>
+          <div class="private-chats">
+            <div @click="activePrivateMessage = !activePrivateMessage">
+              <label>private chats</label>
+              <span>{{ activePrivateMessage ? "▾" : "▸" }}</span>
+            </div>
+            <transition name="fade">
+              <MessagesList
+                :filter="filterObject"
+                v-if="activePrivateMessage"
+              />
+            </transition>
+          </div>
+          <div class="groups">
+            <div @click="activeGroups = !activeGroups">
+              <label>groups</label>
+              <span>{{ activeGroups ? "▾" : "▸" }}</span>
+            </div>
+            <transition name="fade">
+              <GroupsList :filter="filterObject" v-if="activeGroups" />
+            </transition>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- in case we are searching using the newChats component -->
+    <div class="chats-list-new-chat" v-else>
+      <div class="chats-list-header">
+        <div style="display: flex; align-items: center; gap: 1rem">
+          <div class="go-back-button" @click="newChat = false">
+            <i class="fas fa-arrow-left"></i>
+          </div>
+          <span class="main-header">New Chat</span>
+        </div>
+      </div>
+
+      <div class="chats-list-body">
+        <div class="search-bar">
+          <input type="text" placeholder="Search..." v-model="filter" />
+        </div>
+        <SearchUsers :filter="filter" />
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-------------------------- Communities ---------------------------->
+
+  <div class="ChatsLiveCompCommun" v-else>
+    <div class="chats-list-main" v-if="!newChat">
+      <div class="chats-list-header">
+        <div class="main-header">{{ userName }}</div>
+        <div class="chats-settings">
+          <div class="new-chat-icon" @click="newChat = true">
+            <i class="fas fa-search"></i>
+          </div>
         </div>
         <div
           class="filter-wrapper"
@@ -21,95 +113,55 @@
           />
         </div>
       </div>
-    </div>
 
-    <div class="chats-list-body">
-      <div class="search-bar">
-        <input
-          type="text"
-          placeholder="Search..."
-          v-model="filter"
-          @click="
-            activePrivateMessage = true;
-            activeGroups = true;
-            activeMessageSearch = true;
-          "
-        />
-      </div>
-      <div class="chats-list-body-content">
-        <div class="current-filter">
-          {{ filters }}
+      <div class="chats-list-body">
+        <div class="search-bar">
+          <input type="text" placeholder="Search..." v-model="filter" />
         </div>
-        <div class="private-chats">
-          <div @click="activePrivateMessage = !activePrivateMessage">
-            <label>private chats</label>
-            <span>{{ activePrivateMessage ? "▾" : "▸" }}</span>
+        <div class="chats-list-body-content">
+          <div class="communities">
+            <transition name="fade">
+              <CommunitiesList :filter="filterObject" v-if="activeGroups" />
+            </transition>
           </div>
-          <transition name="fade">
-            <MessagesList
-              :filter="filterObject"
-              v-if="activePrivateMessage"
-            />
-          </transition>
-        </div>
-        <div class="groups">
-          <div @click="activeGroups = !activeGroups">
-            <label>groups</label>
-            <span>{{ activeGroups ? "▾" : "▸" }}</span>
-          </div>
-          <transition name="fade">
-            <GroupsList
-              :filter="filterObject"
-              v-if="activeGroups"
-            />
-          </transition>
-        </div>
-        <!-- this component should be off when it has no content -->
-        <div class="messages" v-if="!filters && filter">
-          <div @click="activeMessageSearch = !activeMessageSearch">
-            <label>messages</label>
-            <span>{{ activeMessageSearch ? "▾" : "▸" }}</span>
-          </div>
-          <transition name="fade">
-            <MessageSearch
-              :filter="filter"
-              v-if="activeMessageSearch"
-            />
-          </transition>
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- in case we are searching using the newChats component -->
-  <div class="chats-list-new-chat" v-else>
-    <div class="chats-list-header">
-      <div style="display: flex; align-items: center; gap: 1rem">
-        <div class="go-back-button" @click="newChat = false">
-          <i class="fas fa-arrow-left"></i>
+    <!-- in case we are searching using the newChats component -->
+    <div class="chats-list-new-chat" v-else>
+      <div class="chats-list-header">
+        <div style="display: flex; align-items: center; gap: 1rem">
+          <div class="go-back-button" @click="newChat = false">
+            <i class="fas fa-arrow-left"></i>
+          </div>
+          <span class="main-header">New Chat</span>
         </div>
-        <span class="main-header">New Chat</span>
       </div>
-    </div>
 
-    <div class="chats-list-body">
-      <div class="search-bar">
-        <input type="text" placeholder="Search..." v-model="filter" />
+      <div class="chats-list-body">
+        <div class="search-bar">
+          <input type="text" placeholder="Search..." v-model="filter" />
+        </div>
+        <SearchCommunities :filter="filter" />
       </div>
-      <SearchUsers :filter="filter" />
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from "vue";
+import { useRoute } from "vue-router";
 import MessagesList from "@/components/MessagesList.vue";
 import GroupsList from "@/components/GroupsList.vue";
-import MessageSearch from "@/components/MessageSearch.vue";
+import CommunitiesList from "@/components/CommunitiesList.vue";
+import SearchCommunities from "@/components/SearchCommunities.vue";
 import SearchUsers from "@/components/SearchUsers.vue";
 import ChatsFilter from "@/components/ChatsFilter.vue";
 import { auth, db } from "@/Firebase/config.js";
 
+const route = useRoute();
+
+const activeCommunities = ref(true); // toggle for dropdown
 const newChat = ref(false);
 const showFilterPopup = ref(false);
 const filters = ref("");
@@ -117,7 +169,6 @@ const userName = ref("UserName");
 const filter = ref("");
 const activePrivateMessage = ref(true);
 const activeGroups = ref(true);
-const activeMessageSearch = ref(false);
 let closeTimeout = null;
 
 const filterObject = computed(() => ({
@@ -162,6 +213,20 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.ChatsListComp {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.ChatsLiveCompCommun {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
 .chats-list-main,
 .chats-list-new-chat {
   background-color: #081e5e;

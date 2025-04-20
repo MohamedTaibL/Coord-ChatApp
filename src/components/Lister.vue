@@ -1,5 +1,6 @@
 <template>
   <div class="lister">
+    <CurrentConvo v-if="$router.currentRoute.value.name == 'new' && !isGroup && !isCommunity" :filter="filter.search ? filter.search : null" />
     <div v-if="filteredChats.length === 0">
       <p>No chats available</p>
     </div>
@@ -17,6 +18,7 @@
 import { ref, watch, onMounted } from "vue";
 import { db, auth } from "@/Firebase/config";
 import ChatCard from "@/components/ChatCard.vue";
+import CurrentConvo from "@/components/CurrentConvo.vue";
 
 const props = defineProps({
   filter: Object,
@@ -45,6 +47,7 @@ const fetchChats = async () => {
 
   const snapshot = await query.get();
   const user = auth.currentUser;
+
 
   chats.value = snapshot.docs
     .map((doc) => ({ id: doc.id, ...doc.data() }))

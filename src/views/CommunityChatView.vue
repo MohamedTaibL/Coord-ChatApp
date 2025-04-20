@@ -1,4 +1,6 @@
 <template>
-    Displays the communities chats in which the user in enrolled
-
+    <AppWrapper/>
 </template>
+<script setup>
+import AppWrapper from '@/components/AppWrapper.vue'
+</script>

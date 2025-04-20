@@ -1,4 +1,5 @@
 <template>
+  <div class="create-community-view">
     <form class="form-container">
       <h2 class="form-title">Create New Community</h2>
       
@@ -78,7 +79,8 @@
       
       <button type="submit" class="submit-btn">Create Community</button>
     </form>
-  </template>
+  </div>
+</template>
   
   <script setup>
   import { ref, reactive, onMounted, computed } from 'vue';

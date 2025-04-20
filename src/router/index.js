@@ -32,7 +32,7 @@ const routes = [
     component: () => import('@/views/NewChatView.vue')
   },
   {
-    path: '/private/:id?/:isGroup?',
+    path: '/private/:id?',
     name: 'private',
     component: () => import('@/views/PrivateChatView.vue')
   },

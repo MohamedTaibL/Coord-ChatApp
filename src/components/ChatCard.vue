@@ -64,18 +64,22 @@ async function fetchInfo() {
     ChatPicture.value = props.chat.picture;
   }
   else if(props.chat.participants) {
-    if(props.chat.participants.length == 1) {
+    if(props.chat.participants.length == 1 && !props.chat.isGroup && !props.chat.isCommunity) {
       const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
       ChatPicture.value = userDoc.exists ? userDoc.data().imgURL : null;
     }
-    else if(props.chat.participants.length == 2) {
+    else if(!props.chat.isGroup && !props.chat.isCommunity){
       const otherUser = props.chat.participants.find((uid) => (uid !== auth.currentUser.uid));
       const userDoc = await db.collection('users').doc(otherUser).get();
       ChatPicture.value = userDoc.exists ? userDoc.data().imgURL : null;
     }
     else {
-      // still haven't tested this
-      ChatPicture.value = "https://github.githubassets.com/images/modules/logged_out/team-default.png";
+      if(props.chat.isGroup) {
+        ChatPicture.value = "https://i.ibb.co/bM6nqzt7/huggingavatar.png";
+      }
+      else if(props.chat.isCommunity) {
+        ChatPicture.value = "https://i.ibb.co/W4xnwhjx/communityavatar.png";
+      }
     }
   }
 
@@ -83,7 +87,7 @@ async function fetchInfo() {
     ChatName.value = props.chat.name;
   } else if (!props.isCommunity && !props.isGroup) {
     if (Array.isArray(props.chat.participants)) {
-      if(props.chat.participants.length == 1) {
+      if(props.chat.participants.length == 1 && !props.chat.isGroup && !props.chat.isCommunity) {
         const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
         ChatName.value = userDoc.exists ? userDoc.data().name : 'Unknown User';        
       }
@@ -130,11 +134,9 @@ async function listenToUserStatus() {
     const userStatusRef = db.collection('users').doc(otherUser); // Firestore reference
 
     userStatusRef.onSnapshot((doc) => {
-      console.log('User status snapshot:', doc.data());
       if (doc.exists) {
         const status = doc.data().state; // Assuming you store the status as 'online' or 'offline'
         isOnline.value = status === 'online'; // Update the online status
-        console.log("Online status:", isOnline.value);  // Debug log for status change
       }
     });
   }
@@ -180,10 +182,8 @@ function listenToNotifications() {
 function redirectToChat() {
   if (props.chat.id === null) {
     return;
-  } else if (!props.isGroup && !props.isCommunity) {
+  } else if (!props.isCommunity) {
     router.push({ name: 'private', params: { id: props.chat.id } });
-  } else if (props.isGroup) {
-    router.push({ name: 'private', params: { id: props.chat.id, isGroup: true } });
   } else if (props.isCommunity) {
     router.push({ name: 'community', params: { id: props.chat.id } });
   }
