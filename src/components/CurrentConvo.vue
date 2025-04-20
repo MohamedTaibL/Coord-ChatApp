@@ -18,7 +18,9 @@ const otherUserId = route.params.id;
 const tempChat = ref({
   id : null,
   messages : [],
-  participants : auth.currentUser.uid != otherUserId ? [auth.currentUser.uid, otherUserId] : [auth.currentUser.uid]
+  participants : auth.currentUser.uid != otherUserId ? [auth.currentUser.uid, otherUserId] : [auth.currentUser.uid],
+  isGroup : false,
+  isCommunity : false
 });
 
 // Function to fetch existing chat data between the current user and the other user

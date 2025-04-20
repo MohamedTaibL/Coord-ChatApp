@@ -1,7 +1,6 @@
 <template>
     <div class="community-card" :class="{ active: isActive }" @click="redirectToCommunity">
       <img :src="community.picture || defaultImage" class="avatar" />
-      <div class="status-dot" :class="{ online: isOnline }"></div>
       <div class="community-details">
         <strong>{{ community.name || 'Unnamed Community' }}</strong>
         <p>{{ lastMessage || 'No messages yet.' }}</p>
@@ -21,7 +20,6 @@
   
   const router = useRouter();
   const isActive = ref(false);
-  const isOnline = ref(false);
   const lastMessage = ref('');
   
   const defaultImage = 'https://i.ibb.co/W4xnwhjx/communityavatar.png';
@@ -46,15 +44,6 @@
     }
   }
   
-  function listenToStatus() {
-    const ref = db.collection('users').doc(auth.currentUser.uid);
-    ref.onSnapshot(doc => {
-      if (doc.exists) {
-        isOnline.value = doc.data().state === 'online';
-      }
-    });
-  }
-  
   function redirectToCommunity() {
     if (props.community.id) {
       router.push({ name: 'community', params: { id: props.community.id } });
@@ -64,7 +53,6 @@
   onMounted(() => {
     checkActive();
     fetchLastMessage();
-    listenToStatus();
   });
   
   watch(() => router.currentRoute.value, checkActive);
@@ -81,7 +69,7 @@
     cursor: pointer;
     transition: background-color 0.25s ease, transform 0.15s ease;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    position: relative;
+    position: relative; /* Add this to allow absolute positioning of the status dot */
   }
   
   .community-card:hover {

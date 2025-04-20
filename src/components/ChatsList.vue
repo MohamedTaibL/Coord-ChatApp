@@ -134,7 +134,7 @@
           <div class="go-back-button" @click="newChat = false">
             <i class="fas fa-arrow-left"></i>
           </div>
-          <span class="main-header">New Chat</span>
+          <span class="main-header">Explore Communities</span>
         </div>
       </div>
 
@@ -142,7 +142,13 @@
         <div class="search-bar">
           <input type="text" placeholder="Search..." v-model="filter" />
         </div>
-        <SearchCommunities :filter="filter" />
+        <div class="chats-list-body-content">
+          <div class="communities">
+            <transition name="fade">
+              <SearchCommunities :filter="filter" />
+            </transition>
+          </div>
+        </div>
       </div>
     </div>
   </div>

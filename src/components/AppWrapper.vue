@@ -3,13 +3,12 @@
     <ChatsList v-if="showSidebar" class="chatslist"/>
     <button class="toggle-btn" @click="showSidebar = false" v-if="showSidebar">✖</button>
     <button v-else class="reopen-btn" @click="showSidebar = true">❯</button>
-
     <NoChat v-if="noChat" />
     <MainChat v-else />
   </div>
 </template>
 
-  
+
 <script setup>
 import ChatsList from '@/components/ChatsList.vue'
 import MainChat from '@/components/MainChat.vue'
