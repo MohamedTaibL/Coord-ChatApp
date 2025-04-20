@@ -3,7 +3,7 @@
     class="ChatCard"
     v-for="user in filteredUsers"
     :key="user.id"
-    @click="$emit('choice', user)"
+    @click="$router.push(`/new/${user.id}`)"
   >
     <img :src="user.imgURL || 'https://www.gravatar.com/avatar/?d=mp' " class="avatar" />
     <div class="details">

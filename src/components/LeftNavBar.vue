@@ -2,7 +2,10 @@
     <div class="navbar">
         <div class="nav-top">
             <div class="nav-item">
-                <img src="../imgs/coord_logo.png" alt="Profile Image" class="profile-image" style="width: 40px; height: 40px;">
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF"><path d="M220-260q-92 0-156-64T0-480q0-92 64-156t156-64q37 0 71 13t61 37l68 62-60 54-62-56q-16-14-36-22t-42-8q-58 0-99 41t-41 99q0 58 41 99t99 41q22 0 42-8t36-22l310-280q27-24 61-37t71-13q92 0 156 64t64 156q0 92-64 156t-156 64q-37 0-71-13t-61-37l-68-62 60-54 62 56q16 14 36 22t42 8q58 0 99-41t41-99q0-58-41-99t-99-41q-22 0-42 8t-36 22L352-310q-27 24-61 37t-71 13Z"/></svg>
+                <p style="color:white; margin: 0px;">C<span style="color: gold">oo</span>rd</p>
+            </div>
             </div>
         </div>
         <div class="nav-middle">
@@ -84,17 +87,6 @@ const setActiveButton = (buttonName) => {
     if (showProfileDropdown.value) showProfileDropdown.value = false;
 };
 
-const activateCreate = (buttonName) => {
-    activeButton.value = buttonName; 
-};
-
-const createButton = () =>{
-    activeButton.value = 'none';
-    showDropdown.value = !showDropdown.value
-}
-
-
-
 const createCommunity = () => {
     activeButton.value = 'create'
     console.log("Creating community...");
@@ -108,7 +100,7 @@ watch(
     // set the class of the active button accordingly
     if (to.name === 'community') {
         activeButton.value = 'community';
-    } else if (to.name === 'private') {
+    } else if (to.name === 'private' || to.name === 'new') {
         activeButton.value = 'chat';
     } else if (to.name === 'createcommunity' || to.name === 'creategroup') {
         activeButton.value = 'create';
@@ -265,7 +257,7 @@ const createPrivateGroup = () => {
   }
   
   .nav-button.active {
-    background-color: rgba(136, 15, 15, 0.898);
+    background-color: rgb(243, 156, 18, 0.898);
   }
   
   .nav-icon {

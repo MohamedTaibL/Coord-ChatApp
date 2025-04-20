@@ -74,7 +74,6 @@
           console.log("I got here")
           const user = Credentials.user
           if (user.emailVerified){
-            alert("You are successfully logged in!")
             router.push('/private')
 
           }

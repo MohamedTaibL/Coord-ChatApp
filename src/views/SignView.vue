@@ -78,6 +78,11 @@ const addUser = async () =>{
       username.value = ""
       return false;
     }
+    if (/\s/.test(username.value)) {
+      alert("Username cannot contain spaces.");
+      username.value = "";
+      return false;
+    }
   }
   
   catch(error){

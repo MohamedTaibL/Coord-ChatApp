@@ -1,19 +1,35 @@
 <template>
   <div class="filter-list popup">
     <h4>Filter chats by</h4>
-    <div class="filter-option" @click="$emit('filter', 'unread')">
+    <div
+      class="filter-option"
+      :class="{ active: active === 'unread' }"
+      @click="handleFilterClick('unread')"
+    >
       <i class="fas fa-envelope"></i>
       <span>Unread</span>
     </div>
-    <div class="filter-option" @click="$emit('filter', 'mentions')">
+    <div
+      class="filter-option"
+      :class="{ active: active === 'mentions' }"
+      @click="handleFilterClick('mentions')"
+    >
       <i class="fas fa-at"></i>
       <span>Mentions</span>
     </div>
-    <div class="filter-option" @click="$emit('filter', 'admin')">
+    <div
+      class="filter-option"
+      :class="{ active: active === 'admin' }"
+      @click="handleFilterClick('admin')"
+    >
       <i class="fas fa-user-shield"></i>
       <span>Administered Groups</span>
     </div>
-    <div class="filter-option" @click="$emit('filter', 'favorites')">
+    <div
+      class="filter-option"
+      :class="{ active: active === 'favorites' }"
+      @click="handleFilterClick('favorites')"
+    >
       <i class="fas fa-star"></i>
       <span>Favorites</span>
     </div>
@@ -21,7 +37,20 @@
 </template>
 
 <script setup>
-defineEmits(["filter"]);
+import { defineEmits, defineProps } from 'vue';
+
+const emit = defineEmits(['filter']);
+const { active } = defineProps({ active: String });
+
+// Function to handle filter clicks
+const handleFilterClick = (filterType) => {
+  // If the clicked filter is already active, reset the filter (emit an empty string)
+  if (active === filterType) {
+    emit('filter', ''); // Reset the filter
+  } else {
+    emit('filter', filterType); // Set the new filter
+  }
+};
 </script>
 
 <style scoped>
@@ -56,6 +85,12 @@ defineEmits(["filter"]);
   background-color: #132d55;
 }
 
+.filter-option.active {
+  background-color: #1d3d66;
+  font-weight: bold;
+  color: #fff;
+}
+
 .filter-option i {
   font-size: 1rem;
   width: 20px;
@@ -64,8 +99,6 @@ defineEmits(["filter"]);
 
 .popup {
   position: absolute;
-  top: 60px; /* adjust based on where your filter icon is */
-  left: 120px;
   background-color: #0d1a33;
   border-radius: 0.5rem;
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);

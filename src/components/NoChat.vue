@@ -17,8 +17,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #0b132b;
-  color: #ffffffaa;
+  background-color: #DCF0F9;
   text-align: center;
   padding: 2rem;
 }
@@ -26,12 +25,11 @@
 .message h2 {
   margin: 0;
   font-size: 1.5rem;
-  color: #ffffff;
+  color: #001C55;
 }
 
 .message p {
   margin-top: 0.5rem;
   font-size: 1rem;
-  color: #ccc;
 }
 </style>

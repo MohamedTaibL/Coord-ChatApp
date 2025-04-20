@@ -1,27 +1,41 @@
-<!-- src/components/Lister.vue -->
 <template>
-  <div
-    class="chat-card"
-    v-for="chat in filteredChats"
-    :key="chat.id"
-    @click="$emit('choice', chat)"
-  >
-    <ChatCard :chat="chat" />
+  <div class="lister">
+    <div v-if="filteredChats.length === 0">
+      <p>No chats available</p>
+    </div>
+    <div
+      class="chat-card"
+      v-for="chat in filteredChats"
+      :key="chat.id"
+    >
+      <ChatCard :chat="chat" :isGroup="isGroup" :isCommunity="isCommunity" />
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted } from "vue";
+import { ref, watch, onMounted } from "vue";
 import { db, auth } from "@/Firebase/config";
+import ChatCard from "@/components/ChatCard.vue";
 
 const props = defineProps({
   filter: Object,
-  update: [Number, String, Object], // any trigger value
   isGroup: Boolean,
   isCommunity: Boolean,
 });
 
 const chats = ref([]);
+const filteredChats = ref([]);
+const usersMap = ref({});
+
+const fetchUsers = async () => {
+  const snapshot = await db.collection("users").get();
+  const map = {};
+  snapshot.forEach(doc => {
+    map[doc.id] = doc.data();
+  });
+  usersMap.value = map;
+};
 
 const fetchChats = async () => {
   const query = db
@@ -35,52 +49,88 @@ const fetchChats = async () => {
   chats.value = snapshot.docs
     .map((doc) => ({ id: doc.id, ...doc.data() }))
     .filter((chat) => chat.participants?.includes(user.uid));
+
+  applyFilter();
 };
 
-watch(() => props.update, fetchChats, { immediate: true });
+const applyFilter = async () => {
+  const user = auth.currentUser;
+  let list = [...chats.value];
 
-const filteredChats = computed(() => {
-  let list = chats.value
-
-  // search filter
   if (props.filter?.search) {
-    list = list.filter(c => c.name?.toLowerCase().includes(props.filter.search.toLowerCase()))
+    const search = props.filter.search.toLowerCase();
+
+    list = list.filter(c => {
+      const nameMatches = c.name?.toLowerCase().includes(search);
+
+      const participantMatches = c.participants
+        .filter(id => id !== user.uid)
+        .some(id => {
+          const participant = usersMap.value[id];
+          const participantName = participant?.name?.toLowerCase();
+          return participantName?.includes(search);
+        });
+
+      return nameMatches || participantMatches;
+    });
   }
 
-  // filter type logic
   switch (props.filter?.filters) {
     case 'unread':
-      list = list.filter(c => c.unreadCount > 0)
-      break
+      list = await Promise.all(list.map(async (chat) => {
+        const snapshot = await db.collection('notifications')
+          .where('user-id', '==', user.uid)
+          .where('source-id', '==', chat.id)
+          .where('is-read', '==', false)
+          .get();
+        return snapshot.empty ? null : chat;
+      }));
+      list = list.filter(Boolean);
+      break;
+
     case 'mentions':
-      list = list.filter(c => c.mentions?.includes(auth.currentUser.uid))
-      break
+      list = await Promise.all(list.map(async (chat) => {
+        const snapshot = await db.collection('notifications')
+          .where('user-id', '==', user.uid)
+          .where('source-id', '==', chat.id)
+          .where('type', '==', 'mention')
+          .get();
+        return snapshot.empty ? null : chat;
+      }));
+      list = list.filter(Boolean);
+      break;
+
     case 'admin':
-      list = list.filter(c => c.admins?.includes(auth.currentUser.uid))
-      break
+      list = list.filter(chat => chat.admins?.includes(user.uid));
+      break;
+
     case 'favorites':
-      list = list.filter(c => c.favorites?.includes(auth.currentUser.uid))
-      break
+      const userDoc = await db.collection('users').doc(user.uid).get();
+      const favorites = userDoc.data().favorites || [];
+      list = list.filter(chat => favorites.includes(chat.id));
+      break;
   }
 
-  return list
-})
+  filteredChats.value = list;
+};
 
+watch(() => props.filter, applyFilter, { deep: true });
 
+onMounted(async () => {
+  await fetchUsers();
+  await fetchChats();
+});
 </script>
 
 <style scoped>
-.chat-card {
-  background-color: #0d1a33;
-  border-radius: 0.5rem;
-  padding: 0.75rem;
-  margin-bottom: 0.5rem;
+.lister {
+  color: white;
+  height: 100%;
   display: flex;
-  align-items: center;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-.chat-card:hover {
-  background-color: #132d55;
+  flex-direction: column;
+  width: 100%;
+  padding-top: 1rem;
+  z-index: 1000;
+  overflow: visible !important;
 }
 </style>
