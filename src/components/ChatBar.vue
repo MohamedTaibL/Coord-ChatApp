@@ -48,7 +48,7 @@
     if(route.name != 'new'){
         // get the chat from the database
         const chatDoc = await db.collection('chats').doc(chatid).get();
-        if (chat.exists) {
+        if (chatDoc.exists) {
             // not going t push
         }
     } 
