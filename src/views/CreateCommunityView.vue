@@ -1,5 +1,5 @@
 <template>
-    <form class="form-container">
+    <form class="form-container" @submit.prevent = "submit">
       <h2 class="form-title">Create New Community</h2>
       
       <div class="form-field">
@@ -13,7 +13,7 @@
       </div>
   
       <div class="form-field user-selection">
-        <label>Add Users</label>
+        <label>Add Users (Not Required, You Can Always Invite Them Later)</label>
         
         <!-- Search input and dropdown -->
         <div class="search-container">
@@ -82,7 +82,7 @@
   
   <script setup>
   import { ref, reactive, onMounted, computed } from 'vue';
-  import { db } from '@/Firebase/config';
+  import { db , auth} from '@/Firebase/config';
   
   // Form data
   const formData = reactive({
@@ -126,7 +126,8 @@
       .filter(user => 
         !selectedUsers.value.some(selectedUser => selectedUser.id === user.id) &&
         (user.name.toLowerCase().includes(query) || 
-         user.username.toLowerCase().includes(query))
+         user.username.toLowerCase().includes(query)) &&
+         user.id != auth.currentUser.uid
       )
       .slice(0, 5); // Show maximum 5 results
   };
@@ -144,6 +145,43 @@
       selectedUser.id !== user.id
     );
   };
+
+
+  const submit = async () => {
+    try {
+        const chatRef = await db.collection("chats").add({
+            name: formData.name,
+            imgURL: "https://i.ibb.co/W4xnwhjx/communityavatar.png",
+            bio: formData.bio,
+            isGroup: false,
+            isCommunity: true,
+            participants: [auth.currentUser.uid],
+            admins: [auth.currentUser.uid]
+        });
+
+        const communityID = chatRef.id;
+
+        for (const user of selectedUsers.value) {
+            const userRef = await db.collection("users").doc(user.id).get();
+            const userInvites = userRef.data().invitations || [];
+
+            await db.collection("users").doc(user.id).update({
+                invitations: [...userInvites, communityID]
+            });
+        }
+
+        alert("Community Created Successfully!")
+        formData.name = ''
+        formData.bio = ''
+        selectedUsers.value = []
+        searchQuery.value = ""
+
+    } catch (error) {
+        alert("Something went wrong.");
+        console.error(error); 
+    }
+}
+
   </script>
   
   <style scoped>
