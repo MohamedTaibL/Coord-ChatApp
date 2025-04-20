@@ -89,8 +89,7 @@ const setActiveButton = (buttonName) => {
 
 const createCommunity = () => {
     activeButton.value = 'create'
-    console.log("Creating community...");
-    // Add your community creation logic here
+    router.push({name : 'createcommunity'})
     showDropdown.value = false;
 };
 
