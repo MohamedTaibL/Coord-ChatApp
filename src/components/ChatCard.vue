@@ -1,7 +1,7 @@
 <template>
   <div :class="['chat-card', { active: isActive || chat.id == null }]" ref="chatCard" @click="redirectToChat">
     <img :src="ChatPicture || 'https://www.gravatar.com/avatar/?d=mp'" class="avatar" />
-    <div class="status-dot" :class="{ online: isOnline }"></div>
+    <div class="status-dot" :class="{ online: isOnline }" v-if="!isGroup && !isCommunity"></div>
     <div class="chat-details">
       <div>
         <strong>{{ ChatName }}</strong>
@@ -44,10 +44,7 @@ const isPinned = ref(false);
 
 function checkActive() {
   const route = router.currentRoute.value;
-  const matchPrivate = route.name === 'private' && (
-    (!props.isGroup && !props.isCommunity && !route.params.isGroup) ||
-    (props.isGroup && !props.isCommunity && route.params.isGroup)
-  );
+  const matchPrivate = route.name === 'private' && !props.isCommunity;
   const matchCommunity = route.name === 'community' && (!props.isGroup && props.isCommunity);
   
   isActive.value = (matchPrivate || matchCommunity) && route.params.id === props.chat.id;
@@ -85,7 +82,8 @@ async function fetchInfo() {
 
   if (props.chat.name) {
     ChatName.value = props.chat.name;
-  } else if (!props.isCommunity && !props.isGroup) {
+  }
+  else if (!props.isCommunity && !props.isGroup) {
     if (Array.isArray(props.chat.participants)) {
       if(props.chat.participants.length == 1 && !props.chat.isGroup && !props.chat.isCommunity) {
         const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
@@ -121,7 +119,7 @@ async function fetchInfo() {
     LastMessage.value = 'No messages yet.';
   }
 
-  listenToUserStatus();
+  if(!props.chat.isGroup && !props.chat.isCommunity) listenToUserStatus();
 }
 
 async function listenToUserStatus() {
@@ -135,8 +133,8 @@ async function listenToUserStatus() {
 
     userStatusRef.onSnapshot((doc) => {
       if (doc.exists) {
-        const status = doc.data().state; // Assuming you store the status as 'online' or 'offline'
-        isOnline.value = status === 'online'; // Update the online status
+        const status = doc.data().state;
+        isOnline.value = status === 'online';
       }
     });
   }
