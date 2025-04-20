@@ -2,7 +2,6 @@ import firebase from 'firebase/app'
 
 import 'firebase/firestore'
 import 'firebase/auth'
-import 'firebase/database'
 
 const firebaseConfig = {
     apiKey: "AIzaSyCrM2IId22aDlrMVA_s9_G6M461TuQHG3w",
@@ -19,7 +18,6 @@ firebase.initializeApp(firebaseConfig)
 
 const db = firebase.firestore()
 const auth = firebase.auth()
-const rtdb = firebase.database()
 
 auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
   .then(() => {
@@ -29,4 +27,4 @@ auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
   }); 
 
 
-export {auth , db, rtdb}
+export {auth , db}

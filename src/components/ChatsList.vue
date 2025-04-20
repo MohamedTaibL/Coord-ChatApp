@@ -305,11 +305,35 @@ onMounted(() => {
 }
 
 /* Chat sections */
+.chats-list-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
 .chats-list-body-content {
-  padding: 0 1rem;
   flex-grow: 1;
   overflow-y: auto;
+  overflow-x: hidden; /* ensures no x-scrolling */
+  scroll-behavior: smooth;
+  padding: 0 1rem;
 }
+
+.chats-list-body-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chats-list-body-content::-webkit-scrollbar-thumb {
+  background-color: #4d94ff;
+  border-radius: 10px;
+}
+
+.chats-list-body-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 
 .private-chats,
 .groups,

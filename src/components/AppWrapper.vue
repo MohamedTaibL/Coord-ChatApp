@@ -27,6 +27,7 @@ onMounted(()=>
 {
     noChat.value = !route.params.id
 })
+
 </script>
 
 <style scoped>

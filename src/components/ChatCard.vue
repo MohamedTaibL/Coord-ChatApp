@@ -1,5 +1,5 @@
 <template>
-  <div :class="['chat-card', { active: isActive || chat.id == null }]" ref="chatCard" @click="redirectToChat">
+  <div :class="['chat-card', { active: isActive || chat.id == null }, {invite: isInvite}]" ref="chatCard" @click="redirectToChat">
     <img :src="ChatPicture || 'https://www.gravatar.com/avatar/?d=mp'" class="avatar" />
     <div class="status-dot" :class="{ online: isOnline }" v-if="!isGroup && !isCommunity"></div>
     <div class="chat-details">
@@ -25,12 +25,13 @@
 import { onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { defineProps } from 'vue';
-import { auth, db, rtdb } from '@/Firebase/config';
+import { auth, db } from '@/Firebase/config';
 
 const props = defineProps({
   chat: Object,
   isGroup: Boolean,
-  isCommunity: Boolean
+  isCommunity: Boolean,
+  isInvite: Boolean,
 });
 
 const router = useRouter();
@@ -352,4 +353,19 @@ async function checkIfPinned() {
 .fa-palette {
   color: #cccccc; /* Default color for non-pinned icon */
 }
+
+.chat-card.invite {
+  background-color: rgba(255, 255, 150, 0.2); /* Transparent yellow */
+  border: 1px solid rgba(255, 255, 150, 0.4);
+}
+
+.chat-card.invite:hover {
+  background-color: rgba(255, 255, 150, 0.3);
+}
+
+.chat-card.invite.active {
+  background-color: rgba(255, 215, 0, 0.4); /* Slightly deeper yellow */
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.6);
+}
+
 </style>

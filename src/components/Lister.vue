@@ -5,6 +5,13 @@
       <p>No chats available</p>
     </div>
     <div
+      class="invites-card"
+      v-for="chat in filteredInvites"
+      :key="chat.id"
+    >
+      <ChatCard :chat="chat" :isGroup="isGroup" :isCommunity="isCommunity" :isInvite="true"/>
+    </div>
+    <div
       class="chat-card"
       v-for="chat in filteredChats"
       :key="chat.id"
@@ -28,6 +35,7 @@ const props = defineProps({
 
 const chats = ref([]);
 const filteredChats = ref([]);
+const filteredInvites = ref([]);
 const usersMap = ref({});
 
 const fetchUsers = async () => {
@@ -59,11 +67,41 @@ const fetchChats = async () => {
 const applyFilter = async () => {
   const user = auth.currentUser;
   let list = [...chats.value];
+  // get the invites list from the 'users' where id = user.uid .invites
+  const userInfo = await db.collection("users").doc(user.uid).get();
+  const invites = userInfo.data().invitations || [];
+
+  const inviteChats = await Promise.all(invites.map(async (inviteId) => {
+    const doc = await db.collection("chats").doc(inviteId).get();
+    if (!doc.exists) return null;
+
+    const data = doc.data();
+    if ((data.isGroup && props.isGroup) || (data.isCommunity && props.isCommunity)) {
+      return { id: doc.id, ...data };
+    }
+    return null;
+  }));
+
+  let inviteslist = inviteChats.filter(Boolean);
 
   if (props.filter?.search) {
     const search = props.filter.search.toLowerCase();
 
     list = list.filter(c => {
+      const nameMatches = c.name?.toLowerCase().includes(search);
+
+      const participantMatches = c.participants
+        .filter(id => id !== user.uid)
+        .some(id => {
+          const participant = usersMap.value[id];
+          const participantName = participant?.name?.toLowerCase();
+          return participantName?.includes(search);
+        });
+
+      return nameMatches || participantMatches;
+    });
+  
+    inviteslist = inviteslist.filter(c => {
       const nameMatches = c.name?.toLowerCase().includes(search);
 
       const participantMatches = c.participants
@@ -89,6 +127,7 @@ const applyFilter = async () => {
         return snapshot.empty ? null : chat;
       }));
       list = list.filter(Boolean);
+      inviteslist = [];
       break;
 
     case 'mentions':
@@ -101,19 +140,23 @@ const applyFilter = async () => {
         return snapshot.empty ? null : chat;
       }));
       list = list.filter(Boolean);
+      inviteslist = [];
       break;
 
     case 'admin':
       list = list.filter(chat => chat.admins?.includes(user.uid));
+      inviteslist = [];
       break;
 
     case 'favorites':
       const userDoc = await db.collection('users').doc(user.uid).get();
       const favorites = userDoc.data().favorites || [];
       list = list.filter(chat => favorites.includes(chat.id));
+      inviteslist = inviteslist.filter(chat => favorites.includes(chat.uid))
       break;
   }
 
+  filteredInvites.value = inviteslist;
   filteredChats.value = list;
 };
 

@@ -38,7 +38,7 @@ async function fetchChat() {
   if (route.name !== "new") {
     const chatDoc = await db.collection("chats").doc(chatid).get();
     if (chatDoc.exists) {
-      chat.value = chatDoc.data();
+      chat.value = { id : chatDoc.id, ...chatDoc.data()};
     }
   } else {
     chat.value = {
