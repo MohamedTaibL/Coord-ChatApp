@@ -109,9 +109,11 @@
   <script setup>
   import { ref, onMounted, computed } from 'vue';
   import { db, auth } from '@/Firebase/config';
+  import { useRoute } from 'vue-router';
   
   const infos = ref(null);
   const editMode = ref(false);
+  const route = useRoute()  
   
   const name = ref('');
   const username = ref('');
@@ -125,12 +127,17 @@
   });
   
   onMounted(async () => {
-    const userRef = await db.collection('users').doc(auth.currentUser.uid).get();
+    try{
+    const userRef = await db.collection('users').doc(route.params.id).get();
     infos.value = userRef.data();
     username.value = infos.value.username;
     name.value = infos.value.name;
     gender.value = infos.value.gender;
     bio.value = infos.value.bio;
+    }
+    catch(error){
+      alert("Something went wrong.")
+    }
   });
   
   const formatBirthday = (birthday) => {
