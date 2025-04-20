@@ -14,7 +14,7 @@ import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const noChat = ref(false)
+const noChat = ref(true)
 
 watch(() => route.params.id, (id) => {
   noChat.value = !id
