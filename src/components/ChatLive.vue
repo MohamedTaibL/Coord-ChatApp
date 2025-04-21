@@ -171,23 +171,33 @@ const setupMessageListener = () => {
   unsubscribeMessages.value = db.collection('chats')
     .doc(props.chat.id)
     .onSnapshot(async doc => {
-      if (!doc.exists) { messages.value = []; return }
-      const ids = doc.data().messages || []
-      const existing = new Set(messages.value.map(m => m.id))
-      const newIds = ids.filter(id => !existing.has(id))
-      if (!newIds.length) return
+      if (!doc.exists) {
+        messages.value = []
+        return
+      }
 
+      const ids = doc.data().messages || []
+
+      // Fetch all messages listed in the array (even existing ones)
       const docs = await Promise.all(
-        newIds.map(id =>
-          db.collection('messages').doc(id).get().then(d => d.exists ? { id: d.id, ...d.data() } : null)
+        ids.map(id =>
+          db.collection('messages').doc(id).get().then(d =>
+            d.exists ? { id: d.id, ...d.data() } : null
+          )
         )
       )
 
-      const newMsgs = await enrichMessagesWithSender(docs.filter(m => m))
-      messages.value = [...messages.value, ...newMsgs]
-        .sort((a, b) => a.timestamp?.seconds - b.timestamp?.seconds || a.timestamp?.nanoseconds - b.timestamp?.nanoseconds)
+      // Filter out nulls (non-existent messages)
+      const enriched = await enrichMessagesWithSender(docs.filter(Boolean))
+
+      // Sort based on timestamp
+      messages.value = enriched.sort((a, b) =>
+        a.timestamp?.seconds - b.timestamp?.seconds ||
+        a.timestamp?.nanoseconds - b.timestamp?.nanoseconds
+      )
     }, e => console.error('Listener error:', e))
 }
+
 
 const sendMessage = async () => {
   const txt = messageText.value.trim()
@@ -224,15 +234,40 @@ const editMessage = (message) => {
   editingMessageId.value = message.id
   editedMessageText.value = message.content
 }
-
 const submitEdit = async (messageId) => {
   try {
-    await db.collection('messages').doc(messageId).update({
+    // Get the original message data
+    const msgSnap = await db.collection('messages').doc(messageId).get()
+    const oldMsg = msgSnap.data()
+
+    // Create a new message (edited version)
+    const newMsgRef = await db.collection('messages').add({
       content: editedMessageText.value,
+      sender: oldMsg.sender,
+      likes: [],
+      timestamp: oldMsg.timestamp, // preserve original sent time
+      edited: true,
+      editedAt: firebase.firestore.FieldValue.serverTimestamp()
     })
 
+    // Update the chat: remove old message, add new one
+    const chatRef = db.collection('chats').doc(props.chat.id)
+
+    await chatRef.update({
+      messages: firebase.firestore.FieldValue.arrayRemove(messageId)
+    })
+
+    await chatRef.update({
+      messages: firebase.firestore.FieldValue.arrayUnion(newMsgRef.id)
+    })
+
+    // Delete the old message
+    await db.collection('messages').doc(messageId).delete()
+
+    // Reset edit state
     isEditing.value = false
     editingMessageId.value = null
+
   } catch (e) {
     console.error('Edit submit error:', e)
   }
