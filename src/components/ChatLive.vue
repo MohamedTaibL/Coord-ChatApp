@@ -2,12 +2,10 @@
   <div class="message-container">
     <!-- Messages -->
     <div class="messages-area" id="messages-area">
-      <div
-        v-for="message in messages"
-        :key="message.id"
-        :class="['message-wrapper', message.sender === currentUserId ? 'my-message-wrapper' : 'other-message-wrapper']"
-      >
-        <img v-if="message.sender !== currentUserId" class="profile-img" :src="message.senderData?.imgURL" :alt="message.senderData?.name || 'User'" />
+      <div v-for="message in messages" :key="message.id"
+        :class="['message-wrapper', message.sender === currentUserId ? 'my-message-wrapper' : 'other-message-wrapper']">
+        <img v-if="message.sender !== currentUserId" class="profile-img" :src="message.senderData?.imgURL"
+          :alt="message.senderData?.name || 'User'" />
         <div class="message-content">
           <div class="sender-info" v-if="message.sender !== currentUserId">
             {{ message.senderData?.name || 'Unknown' }}
@@ -16,12 +14,7 @@
             <div :class="['message', message.sender === currentUserId ? 'my-message' : 'other-message']">
               <!-- Message Text or Editable Input -->
               <div v-if="isEditing && message.id === editingMessageId">
-                <input 
-                  v-model="editedMessageText" 
-                  type="text" 
-                  class="message-input" 
-                  placeholder="Edit your message"
-                />
+                <input v-model="editedMessageText" type="text" class="message-input" placeholder="Edit your message" />
               </div>
               <div v-else>
                 {{ message.content }}
@@ -29,30 +22,23 @@
             </div>
             <div class="message-actions">
               <!-- Edit Button (only for current user's messages) -->
-              <button
-                v-if="message.sender === currentUserId && !isEditing"
-                class="edit-button"
-                @click="editMessage(message)"
-                aria-label="Edit message"
-              >
+              <button v-if="message.sender === currentUserId && !isEditing" class="edit-button"
+                @click="editMessage(message)" aria-label="Edit message">
                 ✏️
               </button>
               <!-- Submit Button (appears when in edit mode) -->
-              <button
-                v-if="message.sender === currentUserId && isEditing && message.id === editingMessageId"
-                class="submit-button"
-                @click="submitEdit(message.id)"
-                aria-label="Submit edited message"
-              >
+              <button v-if="message.sender === currentUserId && isEditing && message.id === editingMessageId"
+                class="submit-button" @click="submitEdit(message.id)" aria-label="Submit edited message">
                 ✅
               </button>
+              <button v-if="message.sender === currentUserId && !isEditing" class="delete-button"
+                @click="deleteMessage(message.id)" aria-label="Delete message">
+                🗑️
+              </button>
+
               <!-- Like Button -->
-              <button
-                class="like-button"
-                :aria-label="message.liked ? 'Unlike message' : 'Like message'"
-                v-if="auth.currentUser.uid !== message.sender"
-                @click="toggleLike(message.id)"
-              >
+              <button class="like-button" :aria-label="message.liked ? 'Unlike message' : 'Like message'"
+                v-if="auth.currentUser.uid !== message.sender" @click="toggleLike(message.id)">
                 ❤️ {{ message.likesCount }}
               </button>
             </div>
@@ -66,14 +52,25 @@
       <div class="input-wrapper">
         <button class="emoji-button" @click="toggleEmojiPicker" aria-label="Choose emoji">
           <!-- emoji icon -->
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+            <line x1="9" y1="9" x2="9.01" y2="9" />
+            <line x1="15" y1="9" x2="15.01" y2="9" />
+          </svg>
         </button>
 
-        <input type="text" class="message-input" :placeholder="props.placeholder" v-model="messageText" @keyup.enter="sendMessage" ref="inputField" />
+        <input type="text" class="message-input" :placeholder="props.placeholder" v-model="messageText"
+          @keyup.enter="sendMessage" ref="inputField" />
 
         <button class="send-button" @click="sendMessage" :disabled="!messageText.trim()" aria-label="Send message">
           <!-- send icon -->
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13" />
+            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+          </svg>
         </button>
       </div>
 
@@ -223,6 +220,22 @@ const setupMessageListener = () => {
     }, e => console.error('Listener error:', e))
 }
 
+const deleteMessage = async (messageId) => {
+  try {
+    // Remove the message ID from the chat's messages array
+    const chatRef = db.collection('chats').doc(props.chat.id)
+    await chatRef.update({
+      messages: firebase.firestore.FieldValue.arrayRemove(messageId)
+    })
+
+    // Delete the message document
+    await db.collection('messages').doc(messageId).delete()
+
+    // The real-time listener (setupMessageListener) will automatically update the UI
+  } catch (e) {
+    console.error('Delete message error:', e)
+  }
+}
 
 const sendMessage = async () => {
   const txt = messageText.value.trim()
