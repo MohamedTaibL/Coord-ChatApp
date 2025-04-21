@@ -265,67 +265,78 @@ watch(() => props.chat, async (c) => {
   }
 }, { immediate: true, deep: true })
 </script>
-
-  
-  <style scoped>
+<style scoped>
   .message-container {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    max-width: 900px;
+    height: 100vh; /* Ensure the container takes the full viewport height */
+    width: 100%; /* Take the full available width */
+    max-width: 100%; /* Prevent any max-width restrictions */
     margin: 0 auto;
     font-family: 'Inter', sans-serif;
   }
+
   .messages-area {
-    flex: 1;
+    flex-grow: 1; /* This allows the messages area to take up all available space */
     overflow-y: auto;
     padding: 1rem;
     display: flex;
     flex-direction: column;
+    width: 100%; /* Ensure it takes up 100% width of the parent */
   }
+
   .message-wrapper {
     display: flex;
     align-items: flex-start;
     margin-bottom: 0.75rem;
   }
+
   .my-message-wrapper {
     justify-content: flex-end;
   }
+
   .profile-img {
     width: 36px;
     height: 36px;
     border-radius: 50%;
     margin-right: 0.75rem;
   }
+
   .message-content {
     max-width: 80%;
   }
+
   .sender-info {
     font-size: 0.75rem;
     color: #6b7280;
     margin-bottom: 0.25rem;
   }
+
   .message {
     padding: 0.75rem 1rem;
     border-radius: 1rem;
     word-break: break-word;
   }
+
   .my-message {
     background-color: #dcf8c6;
     color: #111;
     align-self: flex-end;
   }
+
   .other-message {
     background-color: #ffffff;
     color: #333;
     align-self: flex-start;
   }
-  /* Input and emoji styles remain unchanged */
+
   .input-area {
-  position: relative; /* Add this line */
-  padding: 1rem;
-  border-top: 1px solid #eaeaea;
-}
+    position: relative;
+    padding: 1rem;
+    max-width: 302px; /* Fixed width for the input area */
+    width: 100%; /* Ensure input area takes full width */
+  }
+
   .input-wrapper {
     display: flex;
     align-items: center;
@@ -333,10 +344,13 @@ watch(() => props.chat, async (c) => {
     border-radius: 24px;
     border: 1px solid #e5e7eb;
     padding: 0.5rem;
+    width: 100%; /* Ensure input wrapper takes full width */
   }
+
   .input-wrapper:focus-within {
     border-color: #a855f7;
   }
+
   .message-input {
     flex: 1;
     border: none;
@@ -346,7 +360,9 @@ watch(() => props.chat, async (c) => {
     color: #374151;
     outline: none;
   }
-  .emoji-button, .send-button {
+
+  .emoji-button,
+  .send-button {
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -354,32 +370,36 @@ watch(() => props.chat, async (c) => {
     color: #6b7280;
     cursor: pointer;
   }
+
   .send-button {
     background-color: #a855f7;
     color: white;
   }
+
   .send-button:disabled {
     background-color: #e5e7eb;
     color: #9ca3af;
   }
+
   .emoji-picker {
-  position: absolute;
-  bottom: 60px; /* adjust as needed depending on input height */
-  left: 0;      /* align with left edge of input */
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
-  padding: 0.75rem;
-  border: 1px solid #e5e7eb;
-  z-index: 10;
-  width: max-content; /* ensures it doesn't overflow weirdly */
-}
+    position: absolute;
+    bottom: 60px; /* Adjust as needed depending on input height */
+    left: 0; /* Align with left edge of input */
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    padding: 0.75rem;
+    border: 1px solid #e5e7eb;
+    z-index: 10;
+    width: max-content; /* Ensures it doesn't overflow weirdly */
+  }
 
   .emoji-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 0.5rem;
   }
+
   .emoji-item {
     width: 40px;
     height: 40px;
@@ -387,9 +407,12 @@ watch(() => props.chat, async (c) => {
     border-radius: 8px;
     cursor: pointer;
   }
+
   .emoji-item:hover {
     background-color: #f3e8ff;
     transform: scale(1.1);
   }
-  </style>
+
   
+</style>
+ 
