@@ -190,18 +190,18 @@ const sendFirstMessage = async () => {
 }
 
 const setupMessageListener = () => {
-  if (!props.chat.id) return
-  unsubscribeMessages.value?.()
+  if (!props.chat.id) return;
+  unsubscribeMessages.value?.();
 
   unsubscribeMessages.value = db.collection('chats')
     .doc(props.chat.id)
     .onSnapshot(async doc => {
       if (!doc.exists) {
-        messages.value = []
-        return
+        messages.value = [];
+        return;
       }
 
-      const ids = doc.data().messages || []
+      const ids = doc.data().messages || [];
 
       const docs = await Promise.all(
         ids.map(id =>
@@ -209,36 +209,40 @@ const setupMessageListener = () => {
             d.exists ? { id: d.id, ...d.data() } : null
           )
         )
-      )
+      );
 
-      const enriched = await enrichMessagesWithSender(docs.filter(Boolean))
+      const enriched = await enrichMessagesWithSender(docs.filter(Boolean));
       messages.value = enriched.sort((a, b) =>
         a.timestamp?.seconds - b.timestamp?.seconds ||
         a.timestamp?.nanoseconds - b.timestamp?.nanoseconds
-      )
-    }, e => console.error('Listener error:', e))
+      );
+
+      // Mark all notifications for this chat as read
+      await markNotificationsAsRead(props.chat.id);
+    }, e => console.error('Listener error:', e));
 }
 
-const deleteMessage = async (messageId) => {
-  try {
-    const chatRef = db.collection('chats').doc(props.chat.id)
-    await chatRef.update({
-      messages: firebase.firestore.FieldValue.arrayRemove(messageId)
-    })
-    await db.collection('messages').doc(messageId).delete()
-  } catch (e) {
-    console.error('Delete message error:', e)
-  }
-}
 
 const sendMessage = async () => {
   const txt = messageText.value.trim()
   if (!txt || !auth.currentUser) return
 
   try {
+    let mentionedUsernames = []
+    
+    // Extract mentions (@username) from the message content
+    const mentionPattern = /@([a-zA-Z0-9_]+)/g
+    const mentions = txt.match(mentionPattern)
+    if (mentions) {
+      mentionedUsernames = mentions.map(m => m.slice(1)) // Remove '@' symbol
+    }
+
     if (route.name === 'new') {
-      await sendFirstMessage()
+      // Send first message in a new chat
+      const messageId = await sendFirstMessage()
+      await createNotificationsForMentions(mentionedUsernames, messageId)
     } else {
+      // Send message in existing chat
       const msgRef = await db.collection('messages').add({
         sender: currentUserId,
         content: txt,
@@ -250,12 +254,51 @@ const sendMessage = async () => {
         messages: firebase.firestore.FieldValue.arrayUnion(msgRef.id)
       })
 
+      // Create notifications for mentions in this message
+      await createNotificationsForMentions(mentionedUsernames, msgRef.id)
+
       messageText.value = ''
     }
+    createNewMessageNotification(txt);
   } catch (e) {
     console.error('Send error:', e)
   }
 }
+
+const createNotificationsForMentions = async (mentionedUsernames, messageId) => {
+  // Loop through all mentioned usernames
+  for (const username of mentionedUsernames) {
+    try {
+      // Fetch the user data based on the username
+      const userSnapshot = await db.collection('users').where('username', '==', username).get()
+      if (!userSnapshot.empty) {
+        const userDoc = userSnapshot.docs[0]
+        const userId = userDoc.id
+        const userData = userDoc.data()
+
+        // Add notification to the user's Inbox
+        const notification = {
+          messageId,
+          type: 'mention',
+          content: `You were mentioned in a message by ${auth.currentUser.displayName || 'someone'}`,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          read: false,
+          senderId: currentUserId,
+          senderName: auth.currentUser.displayName || 'Unknown',
+          chatId: props.chat.id
+        }
+
+        // Update the user's Inbox with the new notification
+        await db.collection('users').doc(userId).update({
+          Inbox: firebase.firestore.FieldValue.arrayUnion(notification)
+        })
+      }
+    } catch (e) {
+      console.error('Notification creation error:', e)
+    }
+  }
+}
+
 
 const toggleLike = async (message) => {
   try {
@@ -340,6 +383,61 @@ const submitEdit = async (messageId) => {
     editingMessageId.value = null
   } catch (e) {
     console.error('Edit submit error:', e)
+  }
+}
+
+const markNotificationsAsRead = async (chatId) => {
+  try {
+    // Get the current user
+    const currentUserId = auth.currentUser?.uid;
+
+    // Fetch the user's inbox notifications
+    const userDoc = await db.collection('users').doc(currentUserId).get();
+    const userData = userDoc.data();
+    if (!userData || !userData.Inbox) return;
+
+    // Filter notifications for the specific chat
+    const updatedInbox = userData.Inbox.map(notification => {
+      if (notification.chatId === chatId && !notification.read) {
+        // Mark this notification as read
+        return { ...notification, read: true };
+      }
+      return notification;
+    });
+
+    // Update the user's inbox in Firestore with the read notifications
+    await db.collection('users').doc(currentUserId).update({
+      Inbox: updatedInbox
+    });
+  } catch (e) {
+    console.error('Error marking notifications as read:', e);
+  }
+}
+
+const createNewMessageNotification = async (newMessage) => {
+  try {
+    const notification = {
+      messageId: newMessage.id,
+      type: 'message',
+      content: `New message from ${newMessage.senderData?.name || 'Unknown'}`,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      read: false,
+      senderId: newMessage.sender,
+      senderName: newMessage.senderData?.name || 'Unknown',
+      chatId: props.chat.id 
+    }
+
+    // Find the recipient (who isn't the sender of the message)
+    const recipientId = newMessage.sender === currentUserId
+      ? newMessage.receiverId  // Assuming you have a receiverId
+      : currentUserId
+
+    // Add notification to the user's Inbox
+    await db.collection('users').doc(recipientId).update({
+      Inbox: firebase.firestore.FieldValue.arrayUnion(notification)
+    })
+  } catch (e) {
+    console.error('Create notification error:', e)
   }
 }
 

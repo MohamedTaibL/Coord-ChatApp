@@ -22,10 +22,10 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { defineProps } from 'vue';
-import { auth, db, rtdb , useUserPresence} from '@/Firebase/config';
+import { auth, db , useUserPresence} from '@/Firebase/config';
 
 const props = defineProps({
   chat: Object,
@@ -39,9 +39,16 @@ const ChatName = ref('');
 const ChatPicture = ref(null);
 const LastMessage = ref('');
 const isActive = ref(false);
-const isOnline = ref(false); // Track online status
 const chatCard = ref(null);
 const isPinned = ref(false);
+const otherUser = computed(() => {
+  if (!props.isGroup && !props.isCommunity && Array.isArray(props.chat.participants)) {
+    if(props.chat.participants.length != 1) return props.chat.participants.find((uid) => uid !== auth.currentUser.uid);
+    else return auth.currentUser.uid;
+  }
+  return null;
+});
+const isOnline = useUserPresence(otherUser.value);
 
 function checkActive() {
   const route = router.currentRoute.value;
@@ -119,20 +126,8 @@ async function fetchInfo() {
   } else {
     LastMessage.value = 'No messages yet.';
   }
-
-  if(!props.chat.isGroup && !props.chat.isCommunity) listenToUserStatus();
 }
 
-async function listenToUserStatus() {
-  if (Array.isArray(props.chat.participants)) {
-    let otherUser;
-    if(props.chat.participants.length != 1) otherUser = props.chat.participants.find((uid) => uid !== auth.currentUser.uid);
-    else otherUser = auth.currentUser.uid;
-    
-    const { isOnline: otherUserOnline } = useUserPresence(otherUser);
-    isOnline.value = otherUserOnline.value;
-  }
-}
 
 let unsubscribeNotif = null;
 const hasUnread = ref(false);
