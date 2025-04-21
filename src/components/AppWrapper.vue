@@ -45,13 +45,13 @@ onMounted(()=>
   flex-direction: column;
 }
 
-/* MainChat (right panel) */
 .chat-app-wrapper > *:last-child {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow-y: auto; /* Allow vertical scrolling in MainChat */
 }
+
 
 /* ----------------------------------------------------- */
 .toggle-btn {

@@ -42,8 +42,8 @@ onMounted(() =>{
 
 .router-view {
   flex: 2;
-  overflow-y: auto; /* Allow vertical scrolling inside router-view */
-  overflow-x: hidden;
-  height: 100vh; /* Ensure full height for consistent scroll */
+  overflow-y: auto; /* Allow vertical scrolling */
+  height: 100vh; /* Ensure it takes up full height */
+  overflow-x: hidden; /* Prevent horizontal overflow */
 }
 </style>

@@ -128,8 +128,9 @@ onMounted(async () => {
 .main-chat {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  width: 100%;
+  height: 100vh;
+  width: 100vw;
+  overflow-y: auto; /* Allow scrolling in the y direction */
   background-color: #dcf0f9;
 }
 </style>

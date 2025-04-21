@@ -269,26 +269,42 @@ watch(() => props.chat, async (c) => {
   .message-container {
     display: flex;
     flex-direction: column;
-    height: 100vh; /* Ensure the container takes the full viewport height */
-    width: 100%; /* Take the full available width */
-    max-width: 100%; /* Prevent any max-width restrictions */
-    margin: 0 auto;
+    flex-grow: 1;
+    width: 100%;
+    overflow: hidden; /* Ensure no overflow here either */
     font-family: 'Inter', sans-serif;
   }
-
   .messages-area {
-    flex-grow: 1; /* This allows the messages area to take up all available space */
-    overflow-y: auto;
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    width: 100%; /* Ensure it takes up 100% width of the parent */
-  }
+  flex-grow: 1;
+  overflow-y: auto; /* Updated from scroll to auto */
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: calc(100vh - 70px);
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 transparent;
+}
+
+/* Optional: Custom scrollbar styling */
+.messages-area::-webkit-scrollbar {
+  width: 8px; /* Increased width for better visibility */
+}
+
+.messages-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messages-area::-webkit-scrollbar-thumb {
+  background-color: #b0b0b0;
+  border-radius: 10px;
+}
 
   .message-wrapper {
     display: flex;
     align-items: flex-start;
     margin-bottom: 0.75rem;
+    margin-right: 2rem;
   }
 
   .my-message-wrapper {
@@ -333,8 +349,10 @@ watch(() => props.chat, async (c) => {
   .input-area {
     position: relative;
     padding: 1rem;
-    max-width: 302px; /* Fixed width for the input area */
-    width: 100%; /* Ensure input area takes full width */
+    width: 100%;
+    display: flex;
+    justify-content: center; /* Center the input horizontally */
+    background-color: #dcf0f9; /* Match background */
   }
 
   .input-wrapper {
@@ -344,7 +362,8 @@ watch(() => props.chat, async (c) => {
     border-radius: 24px;
     border: 1px solid #e5e7eb;
     padding: 0.5rem;
-    width: 100%; /* Ensure input wrapper takes full width */
+    width: 100%;
+    max-width: 800px; /* Adjust as needed */
   }
 
   .input-wrapper:focus-within {
