@@ -164,6 +164,31 @@ const loadInitialMessages = async (chatId) => {
   }
 }
 
+const sendFirstMessage = async () =>{
+    const currentUserID =  auth.currentUser.uid
+    const otherUserID = route.params.id
+    const membersArray = otherUserID != currentUserID ? [currentUserID , otherUserID] : [currentUserID]
+
+    const chatRef = await db.collection("chats").add({
+        participants : membersArray,
+        isGroup : false,
+        isCommunity : false
+    })
+    const messageRef = await db.collection("messages").add({
+        sender : currentUserID,
+        content : messageText.value.trim(),
+        likes : [],
+        editDate : null
+    })
+
+
+    await chatRef.update({
+        messages : [... messages.value , messageRef.id]
+    })
+    
+    return messageRef.id
+
+    }
 const setupMessageListener = () => {
   if (!props.chat.id) return
   unsubscribeMessages.value?.()
@@ -195,7 +220,8 @@ const sendMessage = async () => {
 
   try {
     if (route.name === 'new') {
-      await sendFirstMessage()
+      const msgID =await sendFirstMessage()
+
     } else {
       const msgRef = await db.collection('messages').add({
         sender: currentUserId,
