@@ -25,7 +25,7 @@
 import { onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { defineProps } from 'vue';
-import { auth, db } from '@/Firebase/config';
+import { auth, db, rtdb } from '@/Firebase/config';
 
 const props = defineProps({
   chat: Object,
@@ -39,7 +39,7 @@ const ChatName = ref('');
 const ChatPicture = ref(null);
 const LastMessage = ref('');
 const isActive = ref(false);
-const isOnline = ref(false);
+const isOnline = ref(false); // Track online status
 const chatCard = ref(null);
 const isPinned = ref(false);
 
@@ -125,17 +125,18 @@ async function fetchInfo() {
 
 async function listenToUserStatus() {
   if (Array.isArray(props.chat.participants)) {
-
     let otherUser;
     if(props.chat.participants.length != 1) otherUser = props.chat.participants.find((uid) => uid !== auth.currentUser.uid);
     else otherUser = auth.currentUser.uid;
 
-    const userStatusRef = db.collection('users').doc(otherUser); // Firestore reference
+    const userStatusRef = rtdb.ref('users/' + otherUser); // Realtime DB reference
 
-    userStatusRef.onSnapshot((doc) => {
-      if (doc.exists) {
-        const status = doc.data().state;
-        isOnline.value = status === 'online';
+    userStatusRef.on('value', (snapshot) => {
+      const status = snapshot.val();
+      if (status && status.state === 'online') {
+        isOnline.value = true;
+      } else {
+        isOnline.value = false;
       }
     });
   }
@@ -210,7 +211,6 @@ onMounted(() => {
     listenToNotifications();
   }
   checkIfPinned();
-
 });
 
 watch(() => router.currentRoute.value, () => {
@@ -221,9 +221,8 @@ watch(() => router.currentRoute.value, () => {
 });
 
 async function checkIfPinned() {
-  // Ensure that the chat ID is valid before proceeding
   if (!props.chat.id) {
-    return;  // Avoid running the function if the chat ID is invalid
+    return;
   }
 
   const userRef = db.collection('users').doc(auth.currentUser.uid);

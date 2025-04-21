@@ -46,13 +46,24 @@ async function fetchChat() {
   let uid = route.params.id;
 
   if (route.name !== "new") {
-    
-    const chatDoc = await db.collection("chats").doc(chatid).get();
-    if (chatDoc.exists) {
-      chat.value = { id : chatDoc.id, ...chatDoc.data()}; 
-      console.log(chat.value)
+    try{
+       const chatDoc = await db.collection("chats").doc(chatid).get();
+        if (chatDoc.exists) {
+        chat.value = { id : chatDoc.id, ...chatDoc.data()}; 
+        console.log(chat.value)
+        }
     }
-  } else {
+    catch(e){
+        chat.value = {
+        id: null,
+        participants: [auth.currentUser.uid],
+        isGroup: false,
+        isCommunity: false,
+        messages: [],
+        };
+    }
+  }
+  else {
     chat.value = {
       id: null,
       participants:
@@ -67,6 +78,7 @@ async function fetchChat() {
   if (!chat.value.messages){
         chat.value.messages = []
   }
+
   if (!chat.value.isGroup && !chat.value.isCommunity) {
     if (!chat.value.name || !chat.value.bio || !chat.value.picture) {
       if (chat.value.participants.length != 1) {
@@ -74,21 +86,26 @@ async function fetchChat() {
           (uid) => uid !== auth.currentUser.uid
         );
       }
-      console.log(uid)
-      const userDoc = await db.collection("users").doc(uid).get();
-      if (!chat.value.name)
-        chat.value.name = userDoc.exists ? userDoc.data().name : "user1";
-      if (!chat.value.bio)
-        chat.value.bio = userDoc.exists
-          ? "@" + userDoc.data().username
-          : "username";
-      if (!chat.value.picture)
-        chat.value.picture = userDoc.exists ? userDoc.data().imgURL : null;
-      isOnline.value = userDoc.exists
-        ? userDoc.data().state === "online"
-        : false;
-      
-  
+      try{
+        const userDoc = await db.collection("users").doc(uid).get();
+        if (!chat.value.name)
+            chat.value.name = userDoc.exists ? userDoc.data().name : "user1";
+        if (!chat.value.bio)
+            chat.value.bio = userDoc.exists
+            ? "@" + userDoc.data().username
+            : "username";
+        if (!chat.value.picture)
+            chat.value.picture = userDoc.exists ? userDoc.data().imgURL : null;
+        isOnline.value = userDoc.exists
+            ? userDoc.data().state === "online"
+            : false;
+        }
+        catch(e){
+            chat.value.name = "user1";
+            chat.value.bio = "username";
+            chat.value.picture = null;
+            isOnline.value = false;
+        }
     }
   }
   else if (chat.value.isGroup) {
@@ -126,16 +143,9 @@ watch(
 );
 
 onMounted(async () => {
-  try{
   await fetchChat();
   if (!chat.value?.isGroup && !chat.value?.isCommunity) {
     listenToUserStatus();
-  }
-  }
-  catch(e){
-    alert("Issue occured")
-    router.push("/private")
-
   }
 });
 </script>
