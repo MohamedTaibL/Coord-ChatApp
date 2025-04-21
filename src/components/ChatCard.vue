@@ -25,7 +25,7 @@
 import { onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { defineProps } from 'vue';
-import { auth, db, rtdb } from '@/Firebase/config';
+import { auth, db, rtdb , useUserPresence} from '@/Firebase/config';
 
 const props = defineProps({
   chat: Object,
@@ -128,17 +128,9 @@ async function listenToUserStatus() {
     let otherUser;
     if(props.chat.participants.length != 1) otherUser = props.chat.participants.find((uid) => uid !== auth.currentUser.uid);
     else otherUser = auth.currentUser.uid;
-
-    const userStatusRef = rtdb.ref('users/' + otherUser); // Realtime DB reference
-
-    userStatusRef.on('value', (snapshot) => {
-      const status = snapshot.val();
-      if (status && status.state === 'online') {
-        isOnline.value = true;
-      } else {
-        isOnline.value = false;
-      }
-    });
+    
+    const { isOnline: otherUserOnline } = useUserPresence(otherUser);
+    isOnline.value = otherUserOnline.value;
   }
 }
 

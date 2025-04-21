@@ -2,6 +2,7 @@ import firebase from 'firebase/app';
 import 'firebase/firestore';
 import 'firebase/auth';
 import 'firebase/database';
+import { ref, onUnmounted } from 'vue';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCrM2IId22aDlrMVA_s9_G6M461TuQHG3w",
@@ -27,42 +28,53 @@ auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
     console.log('Error setting persistence:', error);
   });
 
-// Monitor authentication state change
-auth.onAuthStateChanged(user => {
-  if (user) {
-    // User is logged in, update their status in Realtime Database
-    const userId = user.uid;
-    const userStatusRef = rtdb.ref('users/' + userId);
-
-    const userStatus = {
-      state: 'online',
-      last_changed: firebase.database.ServerValue.TIMESTAMP
-    };
-
-    // Set or update the user's status to 'online'
-    userStatusRef.set(userStatus)
-      .then(() => {
-        console.log('User status set to online');
-      })
-      .catch((error) => {
-        console.error('Error setting user status:', error);
-      });
-
-    // Automatically mark user as 'offline' when they disconnect (e.g., when the tab/window is closed)
-    userStatusRef.onDisconnect().set({
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) return
+  
+    const uid = user.uid
+    const userStatusDatabaseRef = firebase.database().ref(`/status/${uid}`)
+  
+    const isOfflineForDatabase = {
       state: 'offline',
-      last_changed: firebase.database.ServerValue.TIMESTAMP
-    });
+      last_changed: firebase.database.ServerValue.TIMESTAMP,
+    }
+  
+    const isOnlineForDatabase = {
+      state: 'online',
+      last_changed: firebase.database.ServerValue.TIMESTAMP,
+    }
+  
+    const connectedRef = firebase.database().ref('.info/connected')
+    connectedRef.on('value', snapshot => {
+      if (snapshot.val() === false) return
+  
+      userStatusDatabaseRef
+        .onDisconnect()
+        .set(isOfflineForDatabase)
+        .then(() => {
+          userStatusDatabaseRef.set(isOnlineForDatabase)
+        })
+    })
+})
 
-    // Optionally, listen to changes in user status
-    userStatusRef.on('value', snapshot => {
-      const status = snapshot.val();
-      console.log('User status:', status.state); // Logs 'online' or 'offline'
-    });
-  } else {
-    // User is logged out, handle status cleanup if necessary
-    console.log('User is logged out.');
+
+function useUserPresence(otherUserId) {
+  const isOnline = ref(false)
+  const userStatusRef = rtdb.ref('status/' + otherUserId) // usually under /status/, not /users/
+
+  // Store the actual callback so we can detach it later
+  const statusCallback = snapshot => {
+    const status = snapshot.val()
+    isOnline.value = status?.state === 'online'
   }
-});
 
-export { auth, db, rtdb };
+  userStatusRef.on('value', statusCallback)
+
+  onUnmounted(() => {
+    userStatusRef.off('value', statusCallback)
+  })
+
+  return { isOnline }
+}
+
+export { auth, db, rtdb, useUserPresence};
