@@ -101,9 +101,9 @@ const props = defineProps({
     const currentUserID =  auth.currentUser.uid
     const otherUserID = route.params.id
     const membersArray = otherUserID != currentUserID ? [currentUserID , otherUserID] : [currentUserID]
-
+    try{
     const chatRef = await db.collection("chats").add({
-        members : membersArray,
+        participants : membersArray,
         isGroup : false,
         isCommunity : false
     })
@@ -118,12 +118,16 @@ const props = defineProps({
 
 
     await chatRef.update({
-        messages : [... messages , messageRef.id]
+        messages : [... props.chat.messages , messageRef.id]
     })
 
 
+
     }
-  
+    catch(error){
+        alert("Something went wrong")
+    }
+}
   
   // Methods
   const sendMessage = async () => {
@@ -135,14 +139,13 @@ const props = defineProps({
       }
       else{
         const msgRef = await db.collection("messages").add({
-            sender : auth.currentUser.id,
-            content : messageText.value.trim(),
-            likes : [],
-            editDate : null
+            sender : auth.currentUser.uid,
+            content : trimmedMessage,
+            likes : []
         })
-
+        
         await db.collection("chats").doc(props.chat.id).update({
-            messages : [...messages , msgRef.id]
+            messages : [...props.chat.messages , msgRef.id]
             
         })
       }

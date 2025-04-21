@@ -9,12 +9,18 @@
 import ChatBar from "./ChatBar.vue";
 import ChatLive from "./ChatLive.vue";
 import { ref, watch, onMounted } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute , useRouter } from "vue-router";
 import { db, auth } from "@/Firebase/config";
 
 const route = useRoute();
+const router = useRouter()
 const search = ref("");
-const chat = ref(null);
+const chat = ref({
+  id : null,
+  isGroup : false,
+  isCommunity : false,
+  participants : []
+});
 const isOnline = ref(false);
 
 async function listenToUserStatus() {
@@ -22,13 +28,17 @@ async function listenToUserStatus() {
     (uid) => uid !== auth.currentUser.uid
   );
   if (!otherUserId) return;
+  try{
+    const userRef = db.collection("users").doc(otherUserId);
+    userRef.onSnapshot((doc) => {
+      if (doc.exists) {
+        console.log("here we are fetchi")
+        isOnline.value = doc.data().state === "online";
+      }
+    });
+  }catch(e){
 
-  const userRef = db.collection("users").doc(otherUserId);
-  userRef.onSnapshot((doc) => {
-    if (doc.exists) {
-      isOnline.value = doc.data().state === "online";
-    }
-  });
+  }
 }
 
 async function fetchChat() {
@@ -36,9 +46,11 @@ async function fetchChat() {
   let uid = route.params.id;
 
   if (route.name !== "new") {
+    
     const chatDoc = await db.collection("chats").doc(chatid).get();
     if (chatDoc.exists) {
-      chat.value = { id : chatDoc.id, ...chatDoc.data()};
+      chat.value = { id : chatDoc.id, ...chatDoc.data()}; 
+      console.log(chat.value)
     }
   } else {
     chat.value = {
@@ -52,13 +64,17 @@ async function fetchChat() {
       messages: [],
     };
   }
+  if (!chat.value.messages){
+        chat.value.messages = []
+  }
   if (!chat.value.isGroup && !chat.value.isCommunity) {
     if (!chat.value.name || !chat.value.bio || !chat.value.picture) {
-      if (chat.value.participants.length !== 1) {
+      if (chat.value.participants.length != 1) {
         uid = chat.value.participants.find(
           (uid) => uid !== auth.currentUser.uid
         );
       }
+      console.log(uid)
       const userDoc = await db.collection("users").doc(uid).get();
       if (!chat.value.name)
         chat.value.name = userDoc.exists ? userDoc.data().name : "user1";
@@ -71,6 +87,8 @@ async function fetchChat() {
       isOnline.value = userDoc.exists
         ? userDoc.data().state === "online"
         : false;
+      
+  
     }
   }
   else if (chat.value.isGroup) {
@@ -108,9 +126,16 @@ watch(
 );
 
 onMounted(async () => {
+  try{
   await fetchChat();
   if (!chat.value?.isGroup && !chat.value?.isCommunity) {
     listenToUserStatus();
+  }
+  }
+  catch(e){
+    alert("Issue occured")
+    router.push("/private")
+
   }
 });
 </script>

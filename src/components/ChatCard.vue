@@ -127,7 +127,7 @@ async function listenToUserStatus() {
   if (Array.isArray(props.chat.participants)) {
 
     let otherUser;
-    if(props.chat.id) otherUser = props.chat.participants.find((uid) => uid !== auth.currentUser.uid);
+    if(props.chat.participants.length != 1) otherUser = props.chat.participants.find((uid) => uid !== auth.currentUser.uid);
     else otherUser = auth.currentUser.uid;
 
     const userStatusRef = db.collection('users').doc(otherUser); // Firestore reference
