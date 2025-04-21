@@ -38,7 +38,7 @@
 
               <!-- Like Button -->
               <button class="like-button" :aria-label="message.liked ? 'Unlike message' : 'Like message'"
-                v-if="auth.currentUser.uid !== message.sender" @click="toggleLike(message.id)">
+                 @click="toggleLike(message)">
                 ❤️ {{ message.likesCount }}
               </button>
             </div>
@@ -86,9 +86,7 @@
   </div>
 </template>
 
-  
-  
-  <script setup>
+<script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { db, auth } from '@/Firebase/config'
 import { useRoute, useRouter } from 'vue-router'
@@ -131,7 +129,13 @@ const enrichMessagesWithSender = async (msgs) => {
   const enriched = await Promise.all(
     msgs.map(async (msg) => {
       const senderData = await fetchSenderData(msg.sender)
-      return { ...msg, senderData }
+      // Add likesCount and liked properties
+      return {
+        ...msg,
+        senderData,
+        likesCount: msg.likes ? msg.likes.length : 0,
+        liked: msg.likes && msg.likes.includes(currentUserId)
+      }
     })
   )
   return enriched
@@ -161,31 +165,30 @@ const loadInitialMessages = async (chatId) => {
   }
 }
 
-const sendFirstMessage = async () =>{
-    const currentUserID =  auth.currentUser.uid
-    const otherUserID = route.params.id
-    const membersArray = otherUserID != currentUserID ? [currentUserID , otherUserID] : [currentUserID]
+const sendFirstMessage = async () => {
+  const currentUserID = auth.currentUser.uid
+  const otherUserID = route.params.id
+  const membersArray = otherUserID !== currentUserID ? [currentUserID, otherUserID] : [currentUserID]
 
-    const chatRef = await db.collection("chats").add({
-        participants : membersArray,
-        isGroup : false,
-        isCommunity : false
-    })
-    const messageRef = await db.collection("messages").add({
-        sender : currentUserID,
-        content : messageText.value.trim(),
-        likes : [],
-        editDate : null
-    })
+  const chatRef = await db.collection('chats').add({
+    participants: membersArray,
+    isGroup: false,
+    isCommunity: false
+  })
+  const messageRef = await db.collection('messages').add({
+    sender: currentUserID,
+    content: messageText.value.trim(),
+    likes: [],
+    editDate: null
+  })
 
+  await chatRef.update({
+    messages: [...messages.value, messageRef.id]
+  })
 
-    await chatRef.update({
-        messages : [... messages.value , messageRef.id]
-    })
-    
-    return messageRef.id
+  return messageRef.id
+}
 
-    }
 const setupMessageListener = () => {
   if (!props.chat.id) return
   unsubscribeMessages.value?.()
@@ -200,7 +203,6 @@ const setupMessageListener = () => {
 
       const ids = doc.data().messages || []
 
-      // Fetch all messages listed in the array (even existing ones)
       const docs = await Promise.all(
         ids.map(id =>
           db.collection('messages').doc(id).get().then(d =>
@@ -209,10 +211,7 @@ const setupMessageListener = () => {
         )
       )
 
-      // Filter out nulls (non-existent messages)
       const enriched = await enrichMessagesWithSender(docs.filter(Boolean))
-
-      // Sort based on timestamp
       messages.value = enriched.sort((a, b) =>
         a.timestamp?.seconds - b.timestamp?.seconds ||
         a.timestamp?.nanoseconds - b.timestamp?.nanoseconds
@@ -222,16 +221,11 @@ const setupMessageListener = () => {
 
 const deleteMessage = async (messageId) => {
   try {
-    // Remove the message ID from the chat's messages array
     const chatRef = db.collection('chats').doc(props.chat.id)
     await chatRef.update({
       messages: firebase.firestore.FieldValue.arrayRemove(messageId)
     })
-
-    // Delete the message document
     await db.collection('messages').doc(messageId).delete()
-
-    // The real-time listener (setupMessageListener) will automatically update the UI
   } catch (e) {
     console.error('Delete message error:', e)
   }
@@ -243,8 +237,7 @@ const sendMessage = async () => {
 
   try {
     if (route.name === 'new') {
-      const msgID =await sendFirstMessage()
-
+      await sendFirstMessage()
     } else {
       const msgRef = await db.collection('messages').add({
         sender: currentUserId,
@@ -257,11 +250,56 @@ const sendMessage = async () => {
         messages: firebase.firestore.FieldValue.arrayUnion(msgRef.id)
       })
 
-      const senderData = await fetchSenderData(currentUserId)
       messageText.value = ''
     }
   } catch (e) {
     console.error('Send error:', e)
+  }
+}
+
+const toggleLike = async (message) => {
+  try {
+    const messageRef = db.collection('messages').doc(message.id)
+    const messageSnap = await messageRef.get()
+    if (!messageSnap.exists) return
+
+    const messageData = messageSnap.data()
+    const likes = messageData.likes || []
+    const userId = currentUserId
+
+    // Update the UI immediately
+    const messageIndex = messages.value.findIndex(m => m.id === message.id)
+    if (messageIndex === -1) return
+
+    if (likes.includes(userId)) {
+      // Unlike: remove user ID from likes array
+      const updatedLikes = likes.filter(id => id !== userId)
+      
+      // Update Firebase
+      await messageRef.update({
+        likes: firebase.firestore.FieldValue.arrayRemove(userId)
+      })
+      
+      // Update local state immediately
+      messages.value[messageIndex].likes = updatedLikes
+      messages.value[messageIndex].likesCount = updatedLikes.length
+      messages.value[messageIndex].liked = false
+    } else {
+      // Like: add user ID to likes array
+      const updatedLikes = [...likes, userId]
+      
+      // Update Firebase
+      await messageRef.update({
+        likes: firebase.firestore.FieldValue.arrayUnion(userId)
+      })
+      
+      // Update local state immediately
+      messages.value[messageIndex].likes = updatedLikes
+      messages.value[messageIndex].likesCount = updatedLikes.length
+      messages.value[messageIndex].liked = true
+    }
+  } catch (e) {
+    console.error('Toggle like error:', e)
   }
 }
 
@@ -273,40 +311,33 @@ const editMessage = (message) => {
   editingMessageId.value = message.id
   editedMessageText.value = message.content
 }
+
 const submitEdit = async (messageId) => {
   try {
-    // Get the original message data
     const msgSnap = await db.collection('messages').doc(messageId).get()
     const oldMsg = msgSnap.data()
 
-    // Create a new message (edited version)
     const newMsgRef = await db.collection('messages').add({
       content: editedMessageText.value,
       sender: oldMsg.sender,
       likes: [],
-      timestamp: oldMsg.timestamp, // preserve original sent time
+      timestamp: oldMsg.timestamp,
       edited: true,
       editedAt: firebase.firestore.FieldValue.serverTimestamp()
     })
 
-    // Update the chat: remove old message, add new one
     const chatRef = db.collection('chats').doc(props.chat.id)
-
     await chatRef.update({
       messages: firebase.firestore.FieldValue.arrayRemove(messageId)
     })
-
     await chatRef.update({
       messages: firebase.firestore.FieldValue.arrayUnion(newMsgRef.id)
     })
 
-    // Delete the old message
     await db.collection('messages').doc(messageId).delete()
 
-    // Reset edit state
     isEditing.value = false
     editingMessageId.value = null
-
   } catch (e) {
     console.error('Edit submit error:', e)
   }
