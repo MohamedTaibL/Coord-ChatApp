@@ -1,5 +1,10 @@
 # app
 
+## contribitors:
+- mohamed taib elkanit : @MohamedTaibL
+- mohammed khatiri : @Mokhatiri
+- 
+
 ## Project setup
 ```
 npm install

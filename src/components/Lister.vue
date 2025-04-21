@@ -53,46 +53,53 @@ const fetchChats = async () => {
     .where("isGroup", "==", props.isGroup)
     .where("isCommunity", "==", props.isCommunity);
 
-  const snapshot = await query.get();
   const user = auth.currentUser;
 
+  // Listen to changes in the chats collection
+  query.onSnapshot(snapshot => {
+    chats.value = snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }))
+      .filter((chat) => chat.participants?.includes(user.uid));
 
-  chats.value = snapshot.docs
-    .map((doc) => ({ id: doc.id, ...doc.data() }))
-    .filter((chat) => chat.participants?.includes(user.uid));
-
-  applyFilter();
+    applyFilter();
+  });
 };
-
 const applyFilter = async () => {
   const user = auth.currentUser;
   let list = [...chats.value];
-  // get the invites list from the 'users' where id = user.uid .invites
+
+  // Get the invites list from the 'users' where id = user.uid .invitations
   const userInfo = await db.collection("users").doc(user.uid).get();
   const invites = userInfo.data().invitations || [];
 
-  const inviteChats = await Promise.all(invites.map(async (inviteId) => {
-    const doc = await db.collection("chats").doc(inviteId).get();
-    if (!doc.exists) return null;
+  // Listen to changes in the invites list for real-time updates
+  const inviteChats = await Promise.all(
+    invites.map(async (inviteId) => {
+      const doc = await db.collection("chats").doc(inviteId).get();
+      if (!doc.exists) return null;
 
-    const data = doc.data();
-    if ((data.isGroup && props.isGroup) || (data.isCommunity && props.isCommunity)) {
-      return { id: doc.id, ...data };
-    }
-    return null;
-  }));
+      const data = doc.data();
+      if (
+        (data.isGroup && props.isGroup) ||
+        (data.isCommunity && props.isCommunity)
+      ) {
+        return { id: doc.id, ...data };
+      }
+      return null;
+    })
+  );
 
   let inviteslist = inviteChats.filter(Boolean);
 
   if (props.filter?.search) {
     const search = props.filter.search.toLowerCase();
 
-    list = list.filter(c => {
+    list = list.filter((c) => {
       const nameMatches = c.name?.toLowerCase().includes(search);
 
       const participantMatches = c.participants
-        .filter(id => id !== user.uid)
-        .some(id => {
+        .filter((id) => id !== user.uid)
+        .some((id) => {
           const participant = usersMap.value[id];
           const participantName = participant?.name?.toLowerCase();
           return participantName?.includes(search);
@@ -100,13 +107,13 @@ const applyFilter = async () => {
 
       return nameMatches || participantMatches;
     });
-  
-    inviteslist = inviteslist.filter(c => {
+
+    inviteslist = inviteslist.filter((c) => {
       const nameMatches = c.name?.toLowerCase().includes(search);
 
       const participantMatches = c.participants
-        .filter(id => id !== user.uid)
-        .some(id => {
+        .filter((id) => id !== user.uid)
+        .some((id) => {
           const participant = usersMap.value[id];
           const participantName = participant?.name?.toLowerCase();
           return participantName?.includes(search);
@@ -117,44 +124,75 @@ const applyFilter = async () => {
   }
 
   switch (props.filter?.filters) {
-    case 'unread':
-      list = await Promise.all(list.map(async (chat) => {
-        const snapshot = await db.collection('notifications')
-          .where('user-id', '==', user.uid)
-          .where('source-id', '==', chat.id)
-          .where('is-read', '==', false)
-          .get();
-        return snapshot.empty ? null : chat;
-      }));
-      list = list.filter(Boolean);
-      inviteslist = [];
-      break;
-
-    case 'mentions':
-      list = await Promise.all(list.map(async (chat) => {
-        const snapshot = await db.collection('notifications')
-          .where('user-id', '==', user.uid)
-          .where('source-id', '==', chat.id)
-          .where('type', '==', 'mention')
-          .get();
-        return snapshot.empty ? null : chat;
-      }));
-      list = list.filter(Boolean);
-      inviteslist = [];
-      break;
-
     case 'admin':
-      list = list.filter(chat => chat.admins?.includes(user.uid));
+      list = list.filter((chat) => chat.admins?.includes(user.uid));
       inviteslist = [];
       break;
 
     case 'favorites':
       const userDoc = await db.collection('users').doc(user.uid).get();
       const favorites = userDoc.data().favorites || [];
-      list = list.filter(chat => favorites.includes(chat.id));
-      inviteslist = inviteslist.filter(chat => favorites.includes(chat.uid))
+      list = list.filter((chat) => favorites.includes(chat.id));
+      inviteslist = inviteslist.filter((chat) => favorites.includes(chat.id));
+      break;
+      
+    case 'unread':
+      // New notifications format (assuming 'notifications' collection)
+      const unreadChats = await Promise.all(
+        list.map(async (chat) => {
+          const notificationsSnapshot = await db
+            .collection('notifications')
+            .where('user-id', '==', user.uid)
+            .where('source-id', '==', chat.id)
+            .where('is-read', '==', false)
+            .get();
+
+          if (!notificationsSnapshot.empty) {
+            return chat;  // If there are unread notifications, include the chat
+          }
+          return null;
+        })
+      );
+      list = unreadChats.filter(Boolean);  // Remove null values (chats without unread notifications)
+      inviteslist = [];  // No need to show invites in 'unread' filter
+      break;
+
+    case 'mentions':
+      // New mentions format (assuming 'notifications' collection with 'type' field for mentions)
+      const mentionChats = await Promise.all(
+        list.map(async (chat) => {
+          const notificationsSnapshot = await db
+            .collection('notifications')
+            .where('user-id', '==', user.uid)
+            .where('source-id', '==', chat.id)
+            .where('type', '==', 'mention')
+            .get();
+
+          if (!notificationsSnapshot.empty) {
+            return chat;  // If there are mentions, include the chat
+          }
+          return null;
+        })
+      );
+      list = mentionChats.filter(Boolean);  // Remove null values (chats without mentions)
+      inviteslist = [];  // No need to show invites in 'mentions' filter
       break;
   }
+
+  // Sort chats by 'lastupdate' field (if it exists)
+  list = list.sort((a, b) => {
+    const lastUpdateA = a.lastupdate ? a.lastupdate.seconds : 0;
+    const lastUpdateB = b.lastupdate ? b.lastupdate.seconds : 0;
+
+    return lastUpdateB - lastUpdateA;  // Sort descending (latest first)
+  });
+
+  inviteslist = inviteslist.sort((a, b) => {
+    const lastUpdateA = a.lastupdate ? a.lastupdate.seconds : 0;
+    const lastUpdateB = b.lastupdate ? b.lastupdate.seconds : 0;
+
+    return lastUpdateB - lastUpdateA;  // Sort descending (latest first)
+  });
 
   filteredInvites.value = inviteslist;
   filteredChats.value = list;
