@@ -1,34 +1,35 @@
 <template>
   <div class="chat-bar">
     <div class="user-info">
-      <img :src=" chat ? (chat.picture ? chat.picture : defaultAvatar) : defaultAvatar" class="avatar" />
-      <div class="status-dot" :class="{ online: isOnline }"></div>
+      <img :src="chat ? (chat.picture ? chat.picture : defaultAvatar) : defaultAvatar" class="avatar" />
       <div class="user-meta">
-      <strong style="display:flex; justify-content: flex-start;">{{ chat ? chat.name : 'user1' }}</strong>
-      <small style="display:flex; justify-content: flex-start;">{{ chat ? chat.bio : 'username' }}</small>
+        <strong style="display:flex; justify-content: flex-start;">{{ chat ? chat.name : 'user1' }}</strong>
+        <small style="display:flex; justify-content: flex-start;">{{ chat ? chat.bio : 'username' }}</small>
       </div>
     </div>
     <input class="chat-search" type="text" v-model="searchQuery" placeholder="search the chat ..." />
     <i class="fa fa-ellipsis-v menu-icon"></i>
   </div>
 </template>
+
 <script setup>
 import { ref } from 'vue';
 
 const props = defineProps({
   chat: Object,
-  isOnline: Boolean
-})
+  isCommunity: Boolean,
+  isGroup: Boolean
+});
 
-const searchQuery = ref('')
+const searchQuery = ref('');
 </script>
 
 <style scoped>
-
 .user-info {
   display: flex;
   align-items: center;
   margin-right: 1rem;
+  position: relative; /* Ensure status dot is positioned relative to this container */
 }
 
 .avatar {
@@ -57,25 +58,24 @@ const searchQuery = ref('')
 }
 
 .chat-bar {
-display: flex;
-align-items: center;
-background-color: #081e5e;
-border-left: 1px solid #1c2636;
-padding: 0.75rem 1rem;
-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-justify-content: space-between;
+  display: flex;
+  align-items: center;
+  background-color: #081e5e;
+  border-left: 1px solid #1c2636;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  justify-content: space-between;
 }
 
 .chat-search {
-background-color: #0d1a33;
-color: #fff;
-border: none;
-border-radius: 0.5rem;
-padding: 0.5rem 0.75rem;
-width: 50%;
-margin: 0 auto;
+  background-color: #0d1a33;
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  width: 50%;
+  margin: 0 auto;
 }
-
 
 .chat-search::placeholder {
   color: #aaa;
@@ -86,5 +86,22 @@ margin: 0 auto;
   color: #ccc;
   margin-left: 1rem;
   cursor: pointer;
+}
+
+/* Status Dot for online/offline */
+.status-dot {
+  width: 10px;
+  height: 10px;
+  background-color: #f44336; /* Default offline color */
+  border-radius: 50%;
+  position: absolute;
+  top: 0; /* Position the dot on the top of the avatar */
+  left: -3%; /* Position it on the right side of the avatar */
+  transform: translateX(50%); /* Fine-tune the position */
+  transition: background-color 0.3s ease;
+}
+
+.status-dot.online {
+  background-color: #4caf50; /* Green for online */
 }
 </style>

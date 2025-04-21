@@ -1,6 +1,6 @@
 <template>
   <div class="main-chat">
-    <ChatBar :chat="chat" :isOnline="isOnline" @search="search" />
+    <ChatBar :chat="chat" @search="search" />
     <ChatLive :search="search" :chat="chat" />
   </div>
 </template>
@@ -21,25 +21,6 @@ const chat = ref({
   isCommunity : false,
   participants : []
 });
-const isOnline = ref(false);
-
-async function listenToUserStatus() {
-  const otherUserId = chat.value?.participants?.find(
-    (uid) => uid !== auth.currentUser.uid
-  );
-  if (!otherUserId) return;
-  try{
-    const userRef = db.collection("users").doc(otherUserId);
-    userRef.onSnapshot((doc) => {
-      if (doc.exists) {
-        console.log("here we are fetchi")
-        isOnline.value = doc.data().state === "online";
-      }
-    });
-  }catch(e){
-
-  }
-}
 
 async function fetchChat() {
   const chatid = route.params.id;
@@ -54,15 +35,16 @@ async function fetchChat() {
         }
     }
     catch(e){
-        chat.value = {
-        id: null,
-        participants: [auth.currentUser.uid],
-        isGroup: false,
-        isCommunity: false,
-        messages: [],
-        };
+      chat.value = {
+      id: null,
+      participants: [auth.currentUser.uid],
+      isGroup: false,
+      isCommunity: false,
+      messages: [],
+      };
     }
   }
+
   else {
     chat.value = {
       id: null,
@@ -75,6 +57,7 @@ async function fetchChat() {
       messages: [],
     };
   }
+
   if (!chat.value.messages){
         chat.value.messages = []
   }
@@ -86,6 +69,9 @@ async function fetchChat() {
           (uid) => uid !== auth.currentUser.uid
         );
       }
+      else {
+        uid = chat.value.participants[0];
+      }
       try{
         const userDoc = await db.collection("users").doc(uid).get();
         if (!chat.value.name)
@@ -96,15 +82,11 @@ async function fetchChat() {
             : "username";
         if (!chat.value.picture)
             chat.value.picture = userDoc.exists ? userDoc.data().imgURL : null;
-        isOnline.value = userDoc.exists
-            ? userDoc.data().state === "online"
-            : false;
         }
         catch(e){
             chat.value.name = "user1";
             chat.value.bio = "username";
             chat.value.picture = null;
-            isOnline.value = false;
         }
     }
   }
@@ -116,7 +98,6 @@ async function fetchChat() {
         chat.value.bio = "No Description";
       if (!chat.value.picture)
         chat.value.picture = "https://i.ibb.co/bM6nqzt7/huggingavatar.png";
-      isOnline.value = "offline";
     }  
   }
   else {
@@ -127,7 +108,6 @@ async function fetchChat() {
             chat.value.bio = "No Description";
         if (!chat.value.picture)
             chat.value.picture = "https://i.ibb.co/W4xnwhjx/communityavatar.png";
-        isOnline.value = "offline";
     }
   }
 }
@@ -136,17 +116,11 @@ watch(
   () => route.params.id,
   async () => {
     await fetchChat();
-    if (!chat.value?.isGroup && !chat.value?.isCommunity) {
-      listenToUserStatus();
-    }
   }
 );
 
 onMounted(async () => {
   await fetchChat();
-  if (!chat.value?.isGroup && !chat.value?.isCommunity) {
-    listenToUserStatus();
-  }
 });
 </script>
 
