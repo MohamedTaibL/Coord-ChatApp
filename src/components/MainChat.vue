@@ -33,18 +33,25 @@ function Search(newVal) {
 async function fetchChat() {
   const chatid = route.params.id;
   let uid = route.params.id;
+  let chatVal = {
+    id: null,
+    participants: [],
+    isGroup: false,
+    isCommunity: false,
+    messages: [],
+  };
 
   if (route.name !== "new") {
     try{
        const chatDoc = await db.collection("chats").doc(chatid).get();
         if (chatDoc.exists) {
-        chat.value = { id : chatDoc.id, ...chatDoc.data()}; 
+        chatVal = { id : chatDoc.id, ...chatDoc.data()}; 
         }
     }
     catch(e){
-      chat.value = {
+      chatVal = {
       id: null,
-      participants: [auth.currentUser.uid],
+      participants: [],
       isGroup: false,
       isCommunity: false,
       messages: [],
@@ -56,20 +63,26 @@ async function fetchChat() {
     const userRef = db.collection("users").doc(auth.currentUser.uid);
     const userDoc = await userRef.get();
 
-
     if(userDoc.exists && userDoc.data().invitations.includes(chatid)) isInvite.value = true;
     else isInvite.value = false;
 
     // first check if the user is allowed in this route ?
-    if(!chat.value.participants.includes(auth.currentUser.uid)){       
-      if(!isInvite){
-        if(!isCommunity){
+    if(!chatVal.participants.includes(auth.currentUser.uid)){ 
+      if(!isInvite.value){
+        console.log("user allowed in this route to check only")
+        if(chatVal.isCommunity){
           isPermited.value = false;
-        }else isPermited.value = true;
-        router.push("/private")
+        }
+        else
+        {
+          isPermited.value = true;
+          console.log("user not allowed in this route")
+          router.push("/private")
+        }
+
       }
     }
-
+    chat.value = chatVal;
   }
 
   else {

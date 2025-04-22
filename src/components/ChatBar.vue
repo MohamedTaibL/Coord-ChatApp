@@ -1,7 +1,7 @@
 <template>
   <div class="chat-bar">
     <div class="user-info">
-      <img :src="chat ? (chat.picture ? chat.picture : defaultAvatar) : defaultAvatar" class="avatar" />
+      <img :src="chat ? (chat.picture ? chat.picture : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y') : defaultAvatar" class="avatar" />
       <div class="user-meta">
         <strong style="display:flex; justify-content: flex-start;">{{ chat ? chat.name : 'user1' }}</strong>
         <small style="display:flex; justify-content: flex-start;">

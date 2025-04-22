@@ -162,7 +162,7 @@ const searchAndUpdateMatches = (query) => {
   .map(msg => msg.id);
 
   // Reset the current match index after each new search
-  currentMatchIndex.value = matches.value.length > 0 ? 0 : -1;
+  currentMatchIndex.value = matches.value.length-1;
 
   console.log("newMatches : ", matches.value)
 
@@ -172,7 +172,6 @@ const searchAndUpdateMatches = (query) => {
 // Highlight matching elements
 const highlightMatches = () => {
   if (matches.value.length > 0) {
-    currentMatchIndex.value = 0;
     scrollToCurrentMatch();
   }
 };
@@ -305,7 +304,8 @@ const sendFirstMessage = async (txt) => {
     sender: currentUserID,
     content: txt,
     likes: [],
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    chatId: chatRef.id
   });
 
   // Add the message reference to the chat
@@ -401,6 +401,7 @@ const sendMessage = async () => {
         sender: currentUserId,
         content: txt,
         likes: [],
+        chatId: props.chat.id,
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       })
 
