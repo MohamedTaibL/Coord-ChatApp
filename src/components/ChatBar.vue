@@ -4,7 +4,9 @@
       <img :src="chat ? (chat.picture ? chat.picture : defaultAvatar) : defaultAvatar" class="avatar" />
       <div class="user-meta">
         <strong style="display:flex; justify-content: flex-start;">{{ chat ? chat.name : 'user1' }}</strong>
-        <small style="display:flex; justify-content: flex-start;">{{ chat ? chat.bio : 'username' }}</small>
+        <small style="display:flex; justify-content: flex-start;">
+          {{ chat && chat.bio ? (chat.bio.length > 50 ? chat.bio.slice(0, 50) + '...' : chat.bio) : 'username' }}
+        </small>
       </div>
     </div>
     <input class="chat-search" type="text" v-model="searchQuery" placeholder="search the chat ..." />
