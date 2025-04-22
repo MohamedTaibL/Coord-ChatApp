@@ -341,17 +341,17 @@ async function checkIfPinned() {
 }
 
 .chat-card.invite {
-  background-color: rgba(255, 255, 150, 0.2); /* Transparent yellow */
-  border: 1px solid rgba(255, 255, 150, 0.4);
+  background-color: rgba(211, 211, 4, 0.46); /* Transparent yellow */
+  border: 1px solid rgba(232, 232, 2, 0.4);
 }
 
 .chat-card.invite:hover {
-  background-color: rgba(255, 255, 150, 0.3);
+  background-color: rgba(255, 255, 0, 0.574);
 }
 
 .chat-card.invite.active {
   background-color: rgba(255, 215, 0, 0.4); /* Slightly deeper yellow */
-  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.6);
+  box-shadow: 0 0 0 2px rgba(255, 217, 0, 0.87);
 }
 
 </style>
