@@ -1,7 +1,7 @@
 <template>
   <div class="main-chat">
     <ChatBar :chat="chat" @search="search" />
-    <ChatLive :search="search" :chat="chat" />
+    <ChatLive :search="search" :chat="chat" :isInvite="isInvite" :isPermited="isPermited"/>
   </div>
 </template>
 
@@ -15,6 +15,8 @@ import { db, auth } from "@/Firebase/config";
 const route = useRoute();
 const router = useRouter()
 const search = ref("");
+const isInvite = ref(false);
+const isPermited = ref(true);
 const chat = ref({
   id : null,
   isGroup : false,
@@ -31,7 +33,6 @@ async function fetchChat() {
        const chatDoc = await db.collection("chats").doc(chatid).get();
         if (chatDoc.exists) {
         chat.value = { id : chatDoc.id, ...chatDoc.data()}; 
-        console.log(chat.value)
         }
     }
     catch(e){
@@ -42,7 +43,27 @@ async function fetchChat() {
       isCommunity: false,
       messages: [],
       };
+      alert("error loading the chat")
+      router.push("/private")
     }
+
+    const userRef = db.collection("users").doc(auth.currentUser.uid);
+    const userDoc = await userRef.get();
+
+
+    if(userDoc.exists && userDoc.data().invitations.includes(chatid)) isInvite.value = true;
+    else isInvite.value = false;
+
+    // first check if the user is allowed in this route ?
+    if(!chat.value.participants.includes(auth.currentUser.uid)){       
+      if(!isInvite){
+        if(!isCommunity){
+          isPermited.value = false;
+        }else isPermited.value = true;
+        router.push("/private")
+      }
+    }
+
   }
 
   else {

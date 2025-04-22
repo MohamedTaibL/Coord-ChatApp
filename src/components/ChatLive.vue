@@ -95,7 +95,8 @@ import { nextTick } from 'vue'
 
 const props = defineProps({
   placeholder: { type: String, default: 'Type your message...' },
-  chat: { type: Object, default: () => ({}) }
+  chat: { type: Object, default: () => ({}) },
+  isInvite: Boolean,
 })
 
 const messageText = ref('')
