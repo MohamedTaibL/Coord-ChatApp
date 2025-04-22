@@ -1,47 +1,66 @@
 <template>
   <div class="message-container">
+    <div class="nav-buttons">
+      <button 
+        v-if="matches.length > 0" 
+        @click="navigateToMatch('up')" 
+        :disabled="currentMatchIndex === 0"
+      >
+        ↑
+      </button>
+      <button 
+        v-if="matches.length > 0" 
+        @click="navigateToMatch('down')" 
+        :disabled="currentMatchIndex === matches.length - 1" 
+      >
+        ↓
+      </button>
+    </div>
     <!-- Messages -->
     <div class="messages-area" id="messages-area">
-      <div v-for="message in messages" :key="message.id"
-        :class="['message-wrapper', message.sender === currentUserId ? 'my-message-wrapper' : 'other-message-wrapper']">
+      <div 
+        v-for="message in messages"
+        :id="message.id"
+        :class="['message-wrapper', message.sender === currentUserId ? 'my-message-wrapper' : 'other-message-wrapper', matches.includes(message.id) ? 'highlighted' : '', matches[currentMatchIndex] === message.id ? 'current-match' : '']"
+        >
+
         <img v-if="message.sender !== currentUserId" class="profile-img" :src="message.senderData?.imgURL"
           :alt="message.senderData?.name || 'User'" />
         <div class="message-content">
+
           <div class="sender-info" v-if="message.sender !== currentUserId">
             {{ message.senderData?.name || 'Unknown' }}
           </div>
+
           <div class="message-row">
+            <!-- Edit/Delete (Only for current user's messages) -->
+            <div v-if="message.sender === currentUserId && !isEditing" class="message-tools">
+              <button class="edit-button" @click="editMessage(message)" aria-label="Edit message">
+                <i class="fa fa-pencil edit-button" title="Edit"></i>
+              </button>
+              <button class="delete-button" @click="deleteMessage(message.id)" aria-label="Delete message">
+                <i class="fa fa-trash delete-button" title="Delete"></i>
+              </button>
+            </div>
+
             <div :class="['message', message.sender === currentUserId ? 'my-message' : 'other-message']">
               <!-- Message Text or Editable Input -->
               <div v-if="isEditing && message.id === editingMessageId">
-                <input v-model="editedMessageText" type="text" class="message-input" placeholder="Edit your message" />
+                <input v-model="editedMessageText" type="text" class="message-input" placeholder="Edit your message"/>
+                <button class="submit-button" @click="submitEdit(message.id)" aria-label="Submit edited message">
+                  <i class="fa fa-check submit-button" title="submit"></i>
+                </button>
               </div>
-              <div v-else>
+              <div class="messageContent" v-else>
                 {{ message.content }}
               </div>
             </div>
-            <div class="message-actions">
-              <!-- Edit Button (only for current user's messages) -->
-              <button v-if="message.sender === currentUserId && !isEditing" class="edit-button"
-                @click="editMessage(message)" aria-label="Edit message">
-                ✏️
-              </button>
-              <!-- Submit Button (appears when in edit mode) -->
-              <button v-if="message.sender === currentUserId && isEditing && message.id === editingMessageId"
-                class="submit-button" @click="submitEdit(message.id)" aria-label="Submit edited message">
-                ✅
-              </button>
-              <button v-if="message.sender === currentUserId && !isEditing" class="delete-button"
-                @click="deleteMessage(message.id)" aria-label="Delete message">
-                🗑️
-              </button>
-
-              <!-- Like Button -->
-              <button class="like-button" :aria-label="message.liked ? 'Unlike message' : 'Like message'"
-                 @click="toggleLike(message)">
-                ❤️ {{ message.likesCount }}
-              </button>
-            </div>
+          </div>
+          <!-- Like button (aligned below or corner) -->
+          <div class="like-button-wrapper">
+            <button class="like-button" :aria-label="message.liked ? 'Unlike message' : 'Like message'" @click="toggleLike(message)">
+              <span :class="{ liked: message.liked }">❤️</span> {{ message.likesCount }}
+            </button>
           </div>
         </div>
       </div>
@@ -96,9 +115,13 @@ import { nextTick } from 'vue'
 const props = defineProps({
   placeholder: { type: String, default: 'Type your message...' },
   chat: { type: Object, default: () => ({}) },
+  search: { type : String, default : ''},
   isInvite: Boolean,
 })
 
+const searchQuery = ref(props.search);
+const matches = ref([]);
+const currentMatchIndex = ref(-1);
 const messageText = ref('')
 const editedMessageText = ref('')
 const showEmojiPicker = ref(false)
@@ -116,6 +139,61 @@ const emojis = [
   '😊','😂','🥰','😍','😎','👍','🔥','💖','🙏','✨',
   '🥺','😭','🤔','🤗','😉','🎉','👌','💯','🌟','😴'
 ]
+
+
+watch(() => props.search, (newQuery) => {
+  searchQuery.value = newQuery;
+  onSearchInput();
+});
+
+const onSearchInput = () => {
+  searchAndUpdateMatches(searchQuery.value);
+};
+
+const searchAndUpdateMatches = (query) => {
+  if (!query) {
+    matches.value = [];
+    currentMatchIndex.value = -1;
+    return;
+  }
+
+  matches.value = messages.value
+  .filter(msg => msg.content.toLowerCase().includes(query.toLowerCase()))
+  .map(msg => msg.id);
+
+  // Reset the current match index after each new search
+  currentMatchIndex.value = matches.value.length > 0 ? 0 : -1;
+
+  console.log("newMatches : ", matches.value)
+
+  highlightMatches();
+};
+
+// Highlight matching elements
+const highlightMatches = () => {
+  if (matches.value.length > 0) {
+    currentMatchIndex.value = 0;
+    scrollToCurrentMatch();
+  }
+};
+
+const scrollToCurrentMatch = () => {
+  const currentId = matches.value[currentMatchIndex.value];
+  const el = document.getElementById(currentId);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+};
+
+const navigateToMatch = (direction) => {
+  if (direction === 'up' && currentMatchIndex.value > 0) {
+    currentMatchIndex.value--;
+  } else if (direction === 'down' && currentMatchIndex.value < matches.value.length - 1) {
+    currentMatchIndex.value++;
+  }
+  scrollToCurrentMatch();
+};
+
 
 const fetchSenderData = async (uid) => {
   try {
@@ -166,6 +244,21 @@ const loadInitialMessages = async (chatId) => {
     messages.value = []
   }
 }
+
+const deleteMessage = async (messageId) => {
+  try {
+    alert("are you sure you want to delete this message?");
+    const chatRef = db.collection('chats').doc(props.chat.id)
+    await chatRef.update({
+      messages: firebase.firestore.FieldValue.arrayRemove(messageId)
+    })
+    await db.collection('messages').doc(messageId).delete()
+  } catch (e) {
+    console.error('Delete message error:', e)
+  }
+}
+
+
 const sendFirstMessage = async (txt) => {
   const currentUserID = auth.currentUser.uid;
   const otherUserID = route.params.id;
@@ -520,6 +613,17 @@ watch(() => props.chat, async (c) => {
 </script>
 
 <style scoped>
+
+.highlighted .messageContent {
+  background-color: #ffeaa7; /* Light yellow */
+  transition: background-color 0.5s;
+}
+
+.current-match .messageContent {
+  background-color: #fdcb6e; /* Slightly darker yellow */
+}
+
+
   .message-container {
     display: flex;
     flex-direction: column;
@@ -582,16 +686,92 @@ watch(() => props.chat, async (c) => {
     margin-bottom: 0.25rem;
   }
 
+  .message-row {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+  }
+
   .message {
-    padding: 0.75rem 1rem;
-    border-radius: 1rem;
+    position: relative;
+    padding: 10px 14px;
+    border-radius: 16px;
+    max-width: 75%;
     word-break: break-word;
+    background-color: #f1f1f1;
   }
 
   .my-message {
-    background-color: #dcf8c6;
-    color: #111;
-    align-self: flex-end;
+    background-color: #d1e7dd;
+  }
+
+  .message-tools {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+  }
+
+  .submit-button {
+    background: transparent;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    color: #666;
+  }
+
+  .edit-button,
+  .delete-button {
+    background: transparent;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    color: #666;
+    opacity: 0; 
+  }
+
+  .message-row:hover{
+    .edit-button , .delete-button {
+      opacity : 1;
+    }
+  }
+
+  .like-button-wrapper {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+  }
+
+  .my-message-wrapper .like-button-wrapper {
+    justify-content: flex-end;
+  }
+
+  .like-button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #e25555;
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+  }
+
+  .like-button .liked {
+    animation: pop 0.3s ease;
+    color: #d40000;
+  }
+
+  @keyframes pop {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.3);
+    }
+    100% {
+      transform: scale(1);
+    }
   }
 
   .other-message {

@@ -1,6 +1,6 @@
 <template>
   <div class="main-chat">
-    <ChatBar :chat="chat" @search="search" />
+    <ChatBar :chat="chat" @search="Search" />
     <ChatLive :search="search" :chat="chat" :isInvite="isInvite" :isPermited="isPermited"/>
   </div>
 </template>
@@ -11,6 +11,8 @@ import ChatLive from "./ChatLive.vue";
 import { ref, watch, onMounted } from "vue";
 import { useRoute , useRouter } from "vue-router";
 import { db, auth } from "@/Firebase/config";
+
+
 
 const route = useRoute();
 const router = useRouter()
@@ -23,6 +25,10 @@ const chat = ref({
   isCommunity : false,
   participants : []
 });
+
+function Search(newVal) {
+  search.value = newVal
+}
 
 async function fetchChat() {
   const chatid = route.params.id;

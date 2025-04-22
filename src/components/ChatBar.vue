@@ -15,7 +15,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 const props = defineProps({
   chat: Object,
@@ -23,7 +23,14 @@ const props = defineProps({
   isGroup: Boolean
 });
 
+const emit = defineEmits(['search']);
+
 const searchQuery = ref('');
+
+// Watch searchQuery and emit when it changes
+watch(searchQuery, (newValue) => {
+  emit('search', newValue);
+});
 </script>
 
 <style scoped>
