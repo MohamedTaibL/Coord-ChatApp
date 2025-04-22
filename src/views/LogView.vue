@@ -166,7 +166,7 @@
     border: 1px solid #ccc;
     border-radius: 4px;
   }
-  
+  ²
   input:focus {
     outline: none;
     border-color: #007bff;

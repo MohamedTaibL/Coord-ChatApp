@@ -91,6 +91,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { db, auth } from '@/Firebase/config'
 import { useRoute, useRouter } from 'vue-router'
 import firebase from 'firebase/app'
+import { nextTick } from 'vue'
 
 const props = defineProps({
   placeholder: { type: String, default: 'Type your message...' },
@@ -164,30 +165,69 @@ const loadInitialMessages = async (chatId) => {
     messages.value = []
   }
 }
+const sendFirstMessage = async (txt) => {
+  const currentUserID = auth.currentUser.uid;
+  const otherUserID = route.params.id;
 
-const sendFirstMessage = async () => {
-  const currentUserID = auth.currentUser.uid
-  const otherUserID = route.params.id
-  const membersArray = otherUserID !== currentUserID ? [currentUserID, otherUserID] : [currentUserID]
+  const isSelfChat = currentUserID === otherUserID;
+  const expectedParticipants = isSelfChat ? [currentUserID] : [currentUserID, otherUserID];
 
-  const chatRef = await db.collection('chats').add({
-    participants: membersArray,
-    isGroup: false,
-    isCommunity: false
-  })
-  const messageRef = await db.collection('messages').add({
+  // Fetch all possible chats where otherUserID is involved
+  const existingChatSnap = await db.collection('chats')
+    .where('participants', 'array-contains', otherUserID)
+    .where('isGroup', '==', false)
+    .where('isCommunity', '==', false)
+    .get();
+
+  let chatRef = null;
+
+  if (!existingChatSnap.empty) {
+    // Look through all matching chats to find one with exactly the expected participants
+    for (const doc of existingChatSnap.docs) {
+      const participants = doc.data().participants;
+      if (participants.length === expectedParticipants.length &&
+          expectedParticipants.every(p => participants.includes(p))) {
+        chatRef = db.collection('chats').doc(doc.id);
+        break;
+      }
+    }
+  }
+
+  // If no matching chat was found, create a new one
+  if (!chatRef) {
+    chatRef = await db.collection('chats').add({
+      participants: expectedParticipants,
+      isGroup: false,
+      isCommunity: false
+    });
+  }
+
+  // Get the chat snapshot
+  const chatSnap = await chatRef.get();
+  props.chat.value = { id: chatSnap.id, ...chatSnap.data() };
+
+  // Add the message to the "messages" collection
+  const msgRef = await db.collection('messages').add({
     sender: currentUserID,
-    content: messageText.value.trim(),
+    content: txt,
     likes: [],
-    editDate: null
-  })
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  });
 
+  // Add the message reference to the chat
   await chatRef.update({
-    messages: [...messages.value, messageRef.id]
-  })
+    messages: firebase.firestore.FieldValue.arrayUnion(msgRef.id)
+  });
 
-  return messageRef.id
-}
+  // Extract mentioned usernames (if any)
+  const mentionedUsernames = extractMentionedUsernames(txt);
+
+  // Create notifications for the message and mentions
+  await createNewMessageNotification(txt, msgRef.id);
+  await createNotificationsForMentions(mentionedUsernames, msgRef.id);
+
+  return msgRef.id;
+};
 
 const setupMessageListener = () => {
   if (!props.chat.id) return;
@@ -210,37 +250,57 @@ const setupMessageListener = () => {
           )
         )
       );
+    
+    // 
+    const enriched = await enrichMessagesWithSender(docs.filter(Boolean));
+    messages.value = enriched.sort((a, b) =>
+      a.timestamp?.seconds - b.timestamp?.seconds ||
+      a.timestamp?.nanoseconds - b.timestamp?.nanoseconds
+    );
 
-      const enriched = await enrichMessagesWithSender(docs.filter(Boolean));
-      messages.value = enriched.sort((a, b) =>
-        a.timestamp?.seconds - b.timestamp?.seconds ||
-        a.timestamp?.nanoseconds - b.timestamp?.nanoseconds
-      );
+    const currentUserDoc = await db.collection('users').doc(currentUserId).get();
+    const inbox = currentUserDoc.data()?.Inbox || [];
 
-      // Mark all notifications for this chat as read
-      await markNotificationsAsRead(props.chat.id);
+    const chatNotifs = inbox
+    .filter(n => n.chatId === props.chat.id)
+    .sort((a, b) => a.timestamp?.seconds - b.timestamp?.seconds || 0);
+
+    if (chatNotifs.length) {
+    const firstMessageId = chatNotifs[0].messageId;
+
+    // Wait for DOM to render
+    nextTick(() => {
+      const el = document.querySelector(`[data-message-id="${firstMessageId}"]`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    }
+
+    await markNotificationsAsRead(props.chat.id);
+
     }, e => console.error('Listener error:', e));
 }
 
+const extractMentionedUsernames = ((messageText) => {
+    let mentionedUsernames = []
+    
+    // Extract mentions (@username) from the message content
+    const mentionPattern = /@([a-zA-Z0-9_]+)/g
+    const mentions = messageText.match(mentionPattern)
+    if (mentions) {
+      mentionedUsernames = mentions.map(m => m.slice(1)) // Remove '@' symbol
+    }
+
+    return mentionedUsernames;
+})
 
 const sendMessage = async () => {
   const txt = messageText.value.trim()
   if (!txt || !auth.currentUser) return
 
   try {
-    let mentionedUsernames = []
-    
-    // Extract mentions (@username) from the message content
-    const mentionPattern = /@([a-zA-Z0-9_]+)/g
-    const mentions = txt.match(mentionPattern)
-    if (mentions) {
-      mentionedUsernames = mentions.map(m => m.slice(1)) // Remove '@' symbol
-    }
-
     if (route.name === 'new') {
       // Send first message in a new chat
-      const messageId = await sendFirstMessage()
-      await createNotificationsForMentions(mentionedUsernames, messageId)
+      await sendFirstMessage(txt);
     } else {
       // Send message in existing chat
       const msgRef = await db.collection('messages').add({
@@ -255,11 +315,12 @@ const sendMessage = async () => {
       })
 
       // Create notifications for mentions in this message
+      const mentionedUsernames = extractMentionedUsernames(txt);
       await createNotificationsForMentions(mentionedUsernames, msgRef.id)
 
       messageText.value = ''
+      await createNewMessageNotification(txt, msgRef.id);
     }
-    createNewMessageNotification(txt);
   } catch (e) {
     console.error('Send error:', e)
   }
@@ -274,17 +335,13 @@ const createNotificationsForMentions = async (mentionedUsernames, messageId) => 
       if (!userSnapshot.empty) {
         const userDoc = userSnapshot.docs[0]
         const userId = userDoc.id
-        const userData = userDoc.data()
 
         // Add notification to the user's Inbox
         const notification = {
           messageId,
           type: 'mention',
-          content: `You were mentioned in a message by ${auth.currentUser.displayName || 'someone'}`,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-          read: false,
+          timestamp: new Date(),
           senderId: currentUserId,
-          senderName: auth.currentUser.displayName || 'Unknown',
           chatId: props.chat.id
         }
 
@@ -388,54 +445,47 @@ const submitEdit = async (messageId) => {
 
 const markNotificationsAsRead = async (chatId) => {
   try {
-    // Get the current user
     const currentUserId = auth.currentUser?.uid;
+    if (!currentUserId) return;
 
-    // Fetch the user's inbox notifications
     const userDoc = await db.collection('users').doc(currentUserId).get();
     const userData = userDoc.data();
     if (!userData || !userData.Inbox) return;
 
-    // Filter notifications for the specific chat
-    const updatedInbox = userData.Inbox.map(notification => {
-      if (notification.chatId === chatId && !notification.read) {
-        // Mark this notification as read
-        return { ...notification, read: true };
-      }
-      return notification;
-    });
+    // Filter out notifications that belong to this chatId
+  
 
-    // Update the user's inbox in Firestore with the read notifications
+    //
+    const updatedInbox = userData.Inbox.filter(notification => notification.chatId !== chatId);
+
     await db.collection('users').doc(currentUserId).update({
       Inbox: updatedInbox
     });
+
   } catch (e) {
     console.error('Error marking notifications as read:', e);
   }
 }
 
-const createNewMessageNotification = async (newMessage) => {
+const createNewMessageNotification = async (newMessage, messageId) => {
   try {
     const notification = {
-      messageId: newMessage.id,
+      messageId,
       type: 'message',
-      content: `New message from ${newMessage.senderData?.name || 'Unknown'}`,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      read: false,
-      senderId: newMessage.sender,
-      senderName: newMessage.senderData?.name || 'Unknown',
-      chatId: props.chat.id 
+      timestamp: new Date(),
+      senderId: currentUserId,
+      chatId: props.chat.id
     }
 
-    // Find the recipient (who isn't the sender of the message)
-    const recipientId = newMessage.sender === currentUserId
-      ? newMessage.receiverId  // Assuming you have a receiverId
-      : currentUserId
-
-    // Add notification to the user's Inbox
-    await db.collection('users').doc(recipientId).update({
-      Inbox: firebase.firestore.FieldValue.arrayUnion(notification)
-    })
+    // the msg should be sent as a notif to all users in the props.chat.participants
+    if(props.chat?.participants)
+      for(let recipientId of props.chat.participants){
+        // Add notification to the user's Inbox
+        if(recipientId != auth.currentUser.uid)
+          await db.collection('users').doc(recipientId).update({
+            Inbox: firebase.firestore.FieldValue.arrayUnion(notification)
+          })
+      }
   } catch (e) {
     console.error('Create notification error:', e)
   }
@@ -449,9 +499,8 @@ const handleClickOutside = (ev) => {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
-  if (props.chat.id) {
+  if(props.chat.id){
     loadInitialMessages(props.chat.id)
-    setupMessageListener()
   }
 })
 
@@ -461,13 +510,14 @@ onUnmounted(() => {
 })
 
 watch(() => props.chat, async (c) => {
-  if (c.id) {
+  if (c && c.id) {
     messages.value = []
-    await loadInitialMessages(c.id)
     setupMessageListener()
   }
 }, { immediate: true, deep: true })
+
 </script>
+
 <style scoped>
   .message-container {
     display: flex;
