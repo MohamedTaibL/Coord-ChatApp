@@ -10,22 +10,71 @@
       </div>
     </div>
     <input class="chat-search" type="text" v-model="searchQuery" placeholder="search the chat ..." />
-    <i class="fa fa-ellipsis-v menu-icon"></i>
+    <div style="display: flex; flex-direction: row; gap: 0.5rem">
+      <div class="join-button" v-if="!isPermited" @click="joinCommunity">join now</div>      
+      <div
+        class="menu-wrapper"
+        @mouseleave="startCloseTimer"
+        @mouseenter="clearCloseTimer"
+      >
+        <div class="filter-chat-icon" @click="toggleMenu">
+          <i class="fa fa-ellipsis-v menu-icon"></i>
+        </div>
+        <div
+          class="popup"
+          v-if="showMenu"
+        >
+          test <br>
+          test <br>
+          test <br>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, watch } from 'vue';
+import {db, auth} from '@/Firebase/config';
+import firebase from 'firebase/app';
 
 const props = defineProps({
   chat: Object,
-  isCommunity: Boolean,
-  isGroup: Boolean
+  isPermited: Boolean
 });
 
 const emit = defineEmits(['search']);
 
+const showMenu = ref(false);
 const searchQuery = ref('');
+let closeTimeout = null;
+
+function toggleMenu() {
+  showMenu.value = !showMenu.value;
+  if (!showMenu.value) clearCloseTimer();
+}
+
+function startCloseTimer() {
+  clearCloseTimer();
+  closeTimeout = setTimeout(() => {
+    showMenu.value = false;
+  }, 300);
+}
+
+function clearCloseTimer() {
+  if (closeTimeout) {
+    clearTimeout(closeTimeout);
+    closeTimeout = null;
+  }
+}
+
+function joinCommunity() {
+  if(props.chat.isCommunity){
+    db.collection('chats').doc(props.chat.id).update({
+      participants: firebase.firestore.FieldValue.arrayUnion(auth.currentUser.uid)
+    })
+  }
+}
 
 // Watch searchQuery and emit when it changes
 watch(searchQuery, (newValue) => {
@@ -34,6 +83,34 @@ watch(searchQuery, (newValue) => {
 </script>
 
 <style scoped>
+
+.menu-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.popup {
+  right: 10%;
+  top: 100%;
+  position: absolute;
+  background-color: #0d1a33;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  z-index: 10;
+  padding: 0.5rem;
+}
+
+.join-button {
+  background-color: #1d02ce;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
 .user-info {
   display: flex;
   align-items: center;

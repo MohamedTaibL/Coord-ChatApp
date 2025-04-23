@@ -1,6 +1,6 @@
 <template>
   <div class="main-chat">
-    <ChatBar :chat="chat" @search="Search" />
+    <ChatBar :chat="chat" @search="Search" :isPermited="isPermited"/>
     <ChatLive :search="search" :chat="chat" :isInvite="isInvite" :isPermited="isPermited"/>
   </div>
 </template>
