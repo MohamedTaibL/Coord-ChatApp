@@ -1,5 +1,5 @@
 <template>
-  <div class="message-container">
+  <div class="message-container" v-if="props.isInvite">
     <div class="nav-buttons">
       <button 
         v-if="matches.length > 0" 
