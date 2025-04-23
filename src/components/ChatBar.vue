@@ -11,7 +11,7 @@
     </div>
     <input class="chat-search" type="text" v-model="searchQuery" placeholder="search the chat ..." />
     <div style="display: flex; flex-direction: row; gap: 0.5rem">
-      <div class="join-button" v-if="!isPermited" @click="joinCommunity">join now</div>      
+      <div class="join-button" v-if="!Permited" @click="joinCommunity">join now</div>      
       <div
         class="menu-wrapper"
         @mouseleave="startCloseTimer"
@@ -24,9 +24,12 @@
           class="popup"
           v-if="showMenu"
         >
-          test <br>
-          test <br>
-          test <br>
+          <div class="menu-content">
+            <div class="menu-option" @click="leave" v-if="chat.isCommunity || chat.isGroup">
+              <i class="fa-solid fa-door-open"></i>
+              <span>leave</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -34,7 +37,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch , computed, onMounted} from 'vue';
 import {db, auth} from '@/Firebase/config';
 import firebase from 'firebase/app';
 
@@ -47,7 +50,10 @@ const emit = defineEmits(['search']);
 
 const showMenu = ref(false);
 const searchQuery = ref('');
+const Permited = computed(() => {return props.isPermited});
+const Permission = ref(true);
 let closeTimeout = null;
+
 
 function toggleMenu() {
   showMenu.value = !showMenu.value;
@@ -74,12 +80,35 @@ function joinCommunity() {
       participants: firebase.firestore.FieldValue.arrayUnion(auth.currentUser.uid)
     })
   }
+  // take off the button before the update,
+  Permited.value = true;
+}
+
+function leave() {
+  // if the user is not the number of admins left is 1 and it's the current user, tell him he can't leave
+  if(props.chat.admins.length === 1 && props.chat.admins[0] === auth.currentUser.uid){
+    alert(`You are the last admin, you can\'t leave, you can delete the ${props.chat.isCommunity ? 'community' : 'group'} instead, or add another admin`);
+    return;
+  }
+  
+  // signal the user to check if he wants to leave
+  if(!confirm(`Are you sure you want to leave ${props.chat.name}?`)){
+    return;
+  }
+
+  db.collection('chats').doc(props.chat.id).update({
+    participants: firebase.firestore.FieldValue.arrayRemove(auth.currentUser.uid)
+  })
+
+  Permited.value = false;
 }
 
 // Watch searchQuery and emit when it changes
 watch(searchQuery, (newValue) => {
   emit('search', newValue);
 });
+
+
 </script>
 
 <style scoped>
@@ -88,6 +117,17 @@ watch(searchQuery, (newValue) => {
   display: flex;
   align-items: center;
   position: relative;
+}
+
+.menu-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  color: #ddd;
+  transition: background-color 0.2s ease;
 }
 
 .popup {
