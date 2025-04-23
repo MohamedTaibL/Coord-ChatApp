@@ -1,5 +1,5 @@
 <template>
-  <div class="message-container">
+  <div class="message-container" v-if="props.isInvite">
     <div class="nav-buttons">
       <button 
         v-if="matches.length > 0" 
@@ -102,6 +102,14 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <div v-else>
+    <div style="display:flex;">
+      <button> Accept </button>
+      <button> Decline </button>
+    </div>
+
   </div>
 </template>
 
