@@ -1,5 +1,5 @@
 <template>
-  <div class="message-container">
+  <div class="message-container" v-if="!isInvite">
     <!-- Messages -->
     <div class="messages-area" id="messages-area">
       <div v-for="message in messages" :key="message.id"
@@ -84,6 +84,14 @@
       </div>
     </div>
   </div>
+
+  <div v-else>
+    <div style="display:flex;">
+      <button> Accept </button>
+      <button> Decline </button>
+    </div>
+
+  </div>
 </template>
 
 <script setup>
@@ -95,7 +103,8 @@ import { nextTick } from 'vue'
 
 const props = defineProps({
   placeholder: { type: String, default: 'Type your message...' },
-  chat: { type: Object, default: () => ({}) }
+  chat: { type: Object, default: () => ({}) },
+  isInvite : {type : Boolean , default :() => (false) }
 })
 
 const messageText = ref('')
