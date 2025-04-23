@@ -10,7 +10,7 @@
           <span v-else class="unread-dot"></span>
         </span>
       </div>
-      <p>{{ LastMessage || 'No messages yet.' }}</p>
+      <p>{{ LastMessage || 'checking...' }}</p>
     </div>
     <i 
       class="fa" 
@@ -59,12 +59,6 @@ function checkActive() {
 }
 
 async function fetchInfo() {
-  if (!props.chat.id) {
-    // Temporary chat state
-    ChatName.value = 'New Conversation';
-    LastMessage.value = 'Start a conversation';
-  }
-
   if(props.chat.picture) {
     ChatPicture.value = props.chat.picture;
   }
@@ -111,6 +105,7 @@ async function fetchInfo() {
   }
 
   if (props.chat.messages && props.chat.messages.length > 0) {
+    
     const messageSnapshot = await db
       .collection('messages')
       .where('chatId', '==', props.chat.id)
@@ -119,7 +114,7 @@ async function fetchInfo() {
       .get();
 
     if (!messageSnapshot.empty) {
-      LastMessage.value = messageSnapshot.docs[0].data().text || 'No content';
+      LastMessage.value = messageSnapshot.docs[0].data().content || 'No content';
     } else {
       LastMessage.value = 'No messages yet.';
     }

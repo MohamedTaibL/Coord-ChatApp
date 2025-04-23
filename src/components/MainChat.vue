@@ -1,7 +1,7 @@
 <template>
   <div class="main-chat">
-    <ChatBar :chat="chat" @search="search" />
-    <ChatLive :search="search" :chat="chat" />
+    <ChatBar :chat="chat" @search="Search" />
+    <ChatLive :search="search" :chat="chat" :isInvite="isInvite" :isPermited="isPermited"/>
   </div>
 </template>
 
@@ -12,9 +12,13 @@ import { ref, watch, onMounted } from "vue";
 import { useRoute , useRouter } from "vue-router";
 import { db, auth } from "@/Firebase/config";
 
+
+
 const route = useRoute();
 const router = useRouter()
 const search = ref("");
+const isInvite = ref(false);
+const isPermited = ref(true);
 const chat = ref({
   id : null,
   isGroup : false,
@@ -22,27 +26,63 @@ const chat = ref({
   participants : []
 });
 
+function Search(newVal) {
+  search.value = newVal
+}
+
 async function fetchChat() {
   const chatid = route.params.id;
   let uid = route.params.id;
+  let chatVal = {
+    id: null,
+    participants: [],
+    isGroup: false,
+    isCommunity: false,
+    messages: [],
+  };
 
   if (route.name !== "new") {
     try{
        const chatDoc = await db.collection("chats").doc(chatid).get();
         if (chatDoc.exists) {
-        chat.value = { id : chatDoc.id, ...chatDoc.data()}; 
-        console.log(chat.value)
+        chatVal = { id : chatDoc.id, ...chatDoc.data()}; 
         }
     }
     catch(e){
-      chat.value = {
+      chatVal = {
       id: null,
-      participants: [auth.currentUser.uid],
+      participants: [],
       isGroup: false,
       isCommunity: false,
       messages: [],
       };
+      alert("error loading the chat")
+      router.push("/private")
     }
+
+    const userRef = db.collection("users").doc(auth.currentUser.uid);
+    const userDoc = await userRef.get();
+
+    if(userDoc.exists && userDoc.data().invitations.includes(chatid)) isInvite.value = true;
+    else isInvite.value = false;
+
+    // first check if the user is allowed in this route ?
+    if(!chatVal.participants.includes(auth.currentUser.uid)){ 
+      if(!isInvite.value){
+        console.log("user allowed in this route to check only")
+        if(chatVal.isCommunity){
+          isPermited.value = false;
+        }
+        else
+        {
+          isPermited.value = true;
+          console.log("user not allowed in this route")
+          router.push("/private")
+        }
+
+      }
+    }
+    chat.value = chatVal;
   }
 
   else {

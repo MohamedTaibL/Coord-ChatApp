@@ -94,6 +94,7 @@
       <div class="chats-list-header">
         <div class="main-header">{{ userName }}</div>
         <div class="chats-settings">
+          <div class="chats-settings">
           <div class="new-chat-icon" @click="newChat = true">
             <i class="fas fa-search"></i>
           </div>
@@ -111,6 +112,7 @@
             :active="filters"
             @filter="updateFilter"
           />
+        </div>
         </div>
       </div>
 
