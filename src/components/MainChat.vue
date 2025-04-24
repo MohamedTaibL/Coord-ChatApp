@@ -1,6 +1,6 @@
 <template>
   <div class="main-chat">
-    <ChatBar :chat="chat" @search="Search" />
+    <ChatBar :chat="chat" :isPermited="isPermited" @search="Search" />
     <ChatLive :search="search" :chat="chat" :isInvite="isInvite" :isPermited="isPermited"/>
   </div>
 </template>
@@ -11,7 +11,6 @@ import ChatLive from "./ChatLive.vue";
 import { ref, watch, onMounted } from "vue";
 import { useRoute , useRouter } from "vue-router";
 import { db, auth } from "@/Firebase/config";
-
 
 
 const route = useRoute();
@@ -69,18 +68,20 @@ async function fetchChat() {
     // first check if the user is allowed in this route ?
     if(!chatVal.participants.includes(auth.currentUser.uid)){ 
       if(!isInvite.value){
-        console.log("user allowed in this route to check only")
         if(chatVal.isCommunity){
           isPermited.value = false;
+          console.log("you are not allowed in this community", isPermited.value)
         }
         else
         {
           isPermited.value = true;
-          console.log("user not allowed in this route")
           router.push("/private")
         }
 
       }
+    }
+    else{
+      isPermited.value = true;
     }
     chat.value = chatVal;
   }
