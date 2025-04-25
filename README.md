@@ -1,7 +1,7 @@
 # app
 
 ## contribitors:
-- mohamed taib elkanit : @MohamedTaibL
+- mohamed taib lkanit : @MohamedTaibL
 - mohammed khatiri : @Mokhatiri
 - nassim lazrek : @1kiroorik1
 
