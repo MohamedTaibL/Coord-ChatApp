@@ -1,5 +1,5 @@
 <template>
-  <div class="message-container" v-if="!props.isInvite">
+  <div class="message-container" v-if="!isInvitation">
     <div class="nav-buttons">
       <button 
         v-if="matches.length > 0" 
@@ -104,12 +104,37 @@
     </div>
   </div>
 
-  <div v-else>
-    <div style="display:flex;">
-      <button> Accept </button>
-      <button> Decline </button>
-    </div>
 
+  <div v-else class="invitation-container">
+    <div class="invitation-card">
+      <div class="invitation-header">
+        <div class="sparkles sparkles-left">✨</div>
+        <h2>Group Invitation</h2>
+        <div class="sparkles sparkles-right">✨</div>
+      </div>
+      
+      <div class="invitation-content">
+        <div class="avatar-container">
+          <div class="avatar-circle">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+        </div>
+        
+        <p class="invitation-message">
+          You have been invited to join this group!
+        </p>
+        
+        <div class="invitation-actions">
+          <button class="accept-btn" @click="accept">Accept Invitation</button>
+          <button class="decline-btn" @click="decline">Decline Invitation</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -142,6 +167,7 @@ const currentUserId = auth.currentUser?.uid || ''
 
 const isEditing = ref(false)
 const editingMessageId = ref(null)
+const isInvitation = ref(false)
 
 const emojis = [
   '😊','😂','🥰','😍','😎','👍','🔥','💖','🙏','✨',
@@ -600,7 +626,47 @@ const handleClickOutside = (ev) => {
   }
 }
 
+
+
+
+
+
+//This is the code for the accepting/declining part
+
+const accept = async () =>{
+  try{
+  await db.collection('users').doc(auth.currentUser.uid).update({
+    invitations: firebase.firestore.FieldValue.arrayRemove(props.chat.id),
+    chats: firebase.firestore.FieldValue.arrayUnion(props.chat.id)
+  })
+
+  await db.collection('chats').doc(props.chat.id).update({
+    participants: firebase.firestore.FieldValue.arrayUnion(auth.currentUser.uid)
+  })
+  isInvitation.value = false
+
+  }
+  catch(e){
+    alert("Something has went wrong. Please try again later.")
+  }
+
+}
+const decline = async () =>{
+  try{
+  await db.collection('users').doc(auth.currentUser.uid).update({
+    invitations: firebase.firestore.FieldValue.arrayRemove(props.chat.id)
+  })
+  window.location.reload()
+  }
+  catch(e){
+    alert("Something has went wrong. Please try again later.")
+  }
+}
+
+
 onMounted(() => {
+  isInvitation.value = props.isInvite
+
   document.addEventListener('click', handleClickOutside)
   if(props.chat.id){
     loadInitialMessages(props.chat.id)
@@ -612,12 +678,17 @@ onUnmounted(() => {
   unsubscribeMessages.value?.()
 })
 
+
 watch(() => props.chat, async (c) => {
   if (c && c.id) {
     messages.value = []
     setupMessageListener()
   }
 }, { immediate: true, deep: true })
+
+watch(() => props.isInvite, (newVal) => {
+  isInvitation.value = newVal
+})
 
 </script>
 
@@ -875,6 +946,155 @@ watch(() => props.chat, async (c) => {
     transform: scale(1.1);
   }
 
-  
+  .invitation-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  padding: 2rem;
+  background-color: #f0f9ff;
+}
+
+.invitation-card {
+  width: 100%;
+  max-width: 480px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transform: translateY(0);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  padding-bottom: 2rem;
+}
+
+.invitation-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+.invitation-header {
+  background: linear-gradient(135deg, #a78bfa, #1114d6);
+  color: white;
+  padding: 1.5rem;
+  text-align: center;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.invitation-header h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.sparkles {
+  position: absolute;
+  font-size: 1.5rem;
+  animation: sparkle 1.5s infinite alternate;
+}
+
+.sparkles-left {
+  left: 30px;
+  animation-delay: 0.2s;
+}
+
+.sparkles-right {
+  right: 30px;
+  animation-delay: 0.7s;
+}
+
+@keyframes sparkle {
+  0% { transform: scale(1) rotate(0deg); opacity: 0.7; }
+  100% { transform: scale(1.2) rotate(15deg); opacity: 1; }
+}
+
+.invitation-content {
+  padding: 2rem;
+  text-align: center;
+}
+
+.avatar-container {
+  margin-bottom: 1.5rem;
+}
+
+.avatar-circle {
+  width: 90px;
+  height: 90px;
+  background-color: #f3f4f6;
+  border-radius: 50%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 4px solid #e0e7ff;
+}
+
+.avatar-circle svg {
+  width: 45px;
+  height: 45px;
+  color: #8b5cf6;
+}
+
+.invitation-message {
+  font-size: 1.25rem;
+  color: #4b5563;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.invitation-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.accept-btn, .decline-btn {
+  padding: 0.875rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  width: 100%;
+}
+
+.accept-btn {
+  background-color: #4a37f1;
+  color: white;
+}
+
+.accept-btn:hover {
+  background-color: #340881;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.decline-btn {
+  background-color: transparent;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+
+.decline-btn:hover {
+  background-color: #f9fafb;
+  color: #4b5563;
+}
+
+/* Animation for buttons */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+}
+
+.accept-btn:focus {
+  animation: pulse 1.5s infinite;
+}
+
 </style>
  

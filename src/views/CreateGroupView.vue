@@ -10,7 +10,7 @@
     
         <div class="form-field">
           <label for="bio">Bio: (Not required) </label>
-          <textarea id="bio" v-model="formData.bio" placeholder="Write a short description" required></textarea>
+          <textarea id="bio" v-model="formData.bio" placeholder="Write a short description"></textarea>
         </div>
     
         <div class="form-field user-selection">
