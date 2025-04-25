@@ -25,7 +25,7 @@
           v-if="showMenu"
         >
           <div class="menu-content">
-            <div class="menu-option" @click="leave" v-if="chat.isCommunity || chat.isGroup">
+            <div class="menu-option" @click="leave" v-if="(chat.isCommunity || chat.isGroup) && Permited">
               <i class="fa-solid fa-door-open"></i>
               <span>leave</span>
             </div>
