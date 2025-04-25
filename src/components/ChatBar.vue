@@ -40,7 +40,8 @@
 import { ref, watch , computed, onMounted} from 'vue';
 import {db, auth} from '@/Firebase/config';
 import firebase from 'firebase/app';
-
+import { useRoute } from 'vue-router';
+import { useRouter } from 'vue-router';
 const props = defineProps({
   chat: Object,
   isPermited: Boolean
@@ -51,7 +52,6 @@ const emit = defineEmits(['search']);
 const showMenu = ref(false);
 const searchQuery = ref('');
 const Permited = computed(() => {return props.isPermited});
-const Permission = ref(true);
 let closeTimeout = null;
 
 
@@ -82,6 +82,7 @@ function joinCommunity() {
   }
   // take off the button before the update,
   Permited.value = true;
+  window.location.reload()
 }
 
 function leave() {
@@ -101,6 +102,9 @@ function leave() {
   })
 
   Permited.value = false;
+  const currentRouteName = useRoute().name
+  useRouter().replace({name : currentRouteName})
+  
 }
 
 // Watch searchQuery and emit when it changes
