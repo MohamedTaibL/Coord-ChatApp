@@ -1,24 +1,45 @@
 <template>
     <div class="edit-details-container">
+      <!-- Toggle Buttons -->
+      <div class="toggle-buttons">
+        <button 
+          class="toggle-btn" 
+          :class="{ active: editInfo }" 
+          @click="editInfo = true"
+        >
+          Edit Chat Info
+        </button>
+        <button 
+          class="toggle-btn" 
+          :class="{ active: !editInfo }" 
+          @click="editInfo = false"
+        >
+          Manage Participants
+        </button>
+      </div>
   
       <!-- Chat Attributes Section -->
-      <div class="chat-attributes">
+      <div v-if="editInfo" class="chat-attributes">
         <h1>Edit Details</h1>
         <form class="chat-form">
           <div class="form-group">
-            <label for="chat-name">Chat Name</label>
+            <label for="chat-name">Name</label>
             <input type="text" id="chat-name" v-model="chat.name" placeholder="Enter chat name" />
           </div>
           <div class="form-group">
-            <label for="chat-bio">Chat Bio</label>
+            <label for="chat-bio">Bio</label>
             <textarea id="chat-bio" v-model="chat.bio" placeholder="Enter chat bio"></textarea>
+          </div>
+          <div class="action-buttons">
+            <button class="save-btn" @click="Save">Save Changes</button>
+            <button class="cancel-btn" @click="router.push({name : chattype , params : { id : chat.id}})">Cancel</button>
           </div>
         </form>
       </div>
   
       <!-- Users Section -->
-      <div class="users-section">
-        <h2>Manage Participants</h2>
+      <div v-else class="users-section">
+        <h1>Manage Participants</h1>
         <div class="search-container">
           <div class="search-wrapper">
             <i class="fa fa-search search-icon"></i>
@@ -60,10 +81,47 @@
           </div>
         </div>
   
-        <div class="action-buttons">
-          <button class="save-btn">Save Changes</button>
-          <button class="cancel-btn">Cancel</button>
+        <!-- Invite Users Section -->
+        <div class="invite-users-section">
+          <h2>Invite Users</h2>
+          <div class="search-container">
+            <div class="search-wrapper">
+              <i class="fa fa-search search-icon"></i>
+              <input type="text" v-model="inviteSearchQuery" placeholder="Search users to invite..." class="search-input" @input="searchUsers" />
+            </div>
+          </div>
+          <div class="users-list">
+            <div class="user-item" v-for="user in usersToInvite" :key="user.id">
+              <div class="user-info">
+                <div class="avatar-container">
+                  <img 
+                    :src="user.imgURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'" 
+                    :alt="user.name" 
+                    class="user-avatar" 
+                  />
+                </div>
+                <div class="user-details">
+                  <span class="user-name">{{ user.name }}</span>
+                  <span class="user-username">@{{ user.username }}</span>
+                </div>
+              </div>
+              <div class="user-actions">
+                <button class="invite-btn" @click="invite(user.id)">
+                  Invite
+                </button>
+              </div>
+            </div>
+            
+            <div v-if="inviteSearchQuery && usersToInvite.length === 0" class="no-results">
+              <p>No users found</p>
+            </div>
+            
+            <div v-if="!inviteSearchQuery" class="no-results">
+              <p>Search for users to invite</p>
+            </div>
+          </div>
         </div>
+  
       </div>
     </div>
   </template>
@@ -72,11 +130,19 @@
   import { ref, computed, onMounted } from 'vue';
   import { db, auth } from '@/Firebase/config';
   import { useRoute, useRouter } from 'vue-router';
+  import firebase from 'firebase/app';
   
   const router = useRouter();
   const route = useRoute();
   const searchQuery = ref('');
+  const inviteSearchQuery = ref('');
   const usersData = ref([]);
+  const usersToInvite = ref([]);
+  const editInfo = ref(true); // Toggle between edit info and manage participants
+  const chattype = computed(() => {
+    if (chat.value.isGroup) return "private";
+    if (chat.value.isCommunity) return "community";
+  });
   
   const chat = ref({
     id: null,
@@ -102,8 +168,8 @@
   const isAdmin = (userId) => {
     return chat.value.admins && chat.value.admins.includes(userId);
   };
-
-  const addListener = async () =>{
+  
+  const addListener = async () => {
     const chatid = route.params.id;
     const chatDoc = db.collection("chats").doc(chatid).onSnapshot((doc) => {
       if (doc.exists) {
@@ -111,8 +177,7 @@
         fetchUsersData();
       }
     });
-}
-
+  };
   
   onMounted(async () => {
     const chatid = route.params.id;
@@ -128,7 +193,6 @@
       alert("There was an issue loading the page. Try again.");
       router.push({ name: "community", params: { id: chatid } });
     }
-
   });
   
   const fetchUsersData = async () => {
@@ -150,19 +214,72 @@
     }
   };
   
+  // Simplified user search function
+  const searchUsers = async () => {
+    if (!inviteSearchQuery.value || inviteSearchQuery.value.length < 2) {
+      usersToInvite.value = [];
+      return;
+    }
+    
+    try {
+      // Simple approach: fetch all users and filter client-side
+      const usersSnapshot = await db.collection('users').get();
+      const allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Filter by search query
+      const query = inviteSearchQuery.value.toLowerCase();
+      const filtered = allUsers.filter(user => 
+        (user.name && user.name.toLowerCase().includes(query)) || 
+        (user.username && user.username.toLowerCase().includes(query))
+      );
+      
+      // Filter out current participants
+      usersToInvite.value = filtered.filter(user => 
+        !chat.value.participants.includes(user.id)
+      );
+    } catch (error) {
+      console.error("Error searching users:", error);
+    }
+  };
+  
   // Placeholder functions for buttons
   const makeAdmin = (userId) => {
-    console.log(`Make ${userId} an admin`);
+    db.collection('chats').doc(chat.value.id).update({
+      admins: firebase.firestore.FieldValue.arrayUnion(userId)
+    });
   };
   
   const deleteUser = (userId) => {
-    console.log(`Delete ${userId}`);
+    db.collection('chats').doc(chat.value.id).update({
+      participants: firebase.firestore.FieldValue.arrayRemove(userId),
+      admins: firebase.firestore.FieldValue.arrayRemove(userId)
+    });
   };
+  
+  const invite = (userId) => {
+    db.collection("users").doc(userId).update({
+      invitations: firebase.firestore.FieldValue.arrayUnion(chat.value.id)
+    });
+}
+
+
+  const Save = async () => {
+    try {
+      await db.collection("chats").doc(chat.value.id).update({
+        name: chat.value.name,
+        bio: chat.value.bio,
+      });
+      alert("Changes saved successfully!");
+      router.push({ name: chattype.value, params: { id: chat.value.id } });
+    } catch (error) {
+      console.error("Error saving changes:", error);
+      alert("Failed to save changes. Please try again.");
+      router.push({ name: chattype.value, params: { id: chat.value.id } });
+    }
+    };
   </script>
   
   <style scoped>
-  
-  
   .edit-details-container {
     max-width: 800px;
     margin: 2rem auto;
@@ -171,7 +288,7 @@
     border-radius: 20px;
     box-shadow: 0 12px 30px rgba(79, 70, 229, 0.1);
     border: 1px solid rgba(79, 70, 229, 0.08);
-    height:80%;
+    height: 80%;
     --primary-color: #4f46e5;
     --primary-light: #eef2ff;
     --primary-dark: #3730a3;
@@ -186,6 +303,41 @@
     --danger-light: #fee2e2;
     --success: #10b981;
     --success-light: #d1fae5;
+  }
+  
+  /* Toggle Buttons */
+  .toggle-buttons {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+    gap: 1rem;
+  }
+  
+  .toggle-btn {
+    padding: 0.8rem 1.6rem;
+    background-color: var(--white);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  }
+  
+  .toggle-btn.active {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border: none;
+    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+    transform: translateY(-2px);
+  }
+  
+  .toggle-btn:hover:not(.active) {
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+    transform: translateY(-2px);
   }
   
   h1 {
@@ -286,6 +438,10 @@
     border: 1px solid var(--border-color);
   }
   
+  .invite-users-section {
+    margin-top: 3rem;
+  }
+  
   .search-container {
     margin-bottom: 1.5rem;
   }
@@ -325,6 +481,7 @@
     padding: 0.75rem;
     background-color: var(--white);
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+    margin-bottom: 1.5rem;
   }
   
   .user-item {
@@ -434,6 +591,19 @@
     color: white;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(239, 68, 68, 0.25);
+  }
+  
+  .invite-btn {
+    background-color: var(--success-light);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+  }
+  
+  .invite-btn:hover {
+    background-color: var(--success);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.25);
   }
   
   .no-results {
