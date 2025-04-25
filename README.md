@@ -3,7 +3,7 @@
 ## contribitors:
 - mohamed taib elkanit : @MohamedTaibL
 - mohammed khatiri : @Mokhatiri
-- 
+- nassim lazrek : @1kiroorik1
 
 ## Project setup
 ```
