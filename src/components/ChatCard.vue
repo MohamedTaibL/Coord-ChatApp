@@ -25,7 +25,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { defineProps } from 'vue';
-import { auth, db , useUserPresence} from '@/Firebase/config';
+import { auth, db, useUserPresence } from '@/Firebase/config';
 
 const props = defineProps({
   chat: Object,
@@ -41,9 +41,11 @@ const LastMessage = ref('');
 const isActive = ref(false);
 const chatCard = ref(null);
 const isPinned = ref(false);
+const hasUnread = ref(false); // Tracks if there are unread notifications
+const lastUnreadType = ref(null); // Tracks the type of the last unread notification
 const otherUser = computed(() => {
   if (!props.isGroup && !props.isCommunity && Array.isArray(props.chat.participants)) {
-    if(props.chat.participants.length != 1) return props.chat.participants.find((uid) => uid !== auth.currentUser.uid);
+    if (props.chat.participants.length !== 1) return props.chat.participants.find((uid) => uid !== auth.currentUser.uid);
     else return auth.currentUser.uid;
   }
   return null;
@@ -54,50 +56,43 @@ function checkActive() {
   const route = router.currentRoute.value;
   const matchPrivate = route.name === 'private' && !props.isCommunity;
   const matchCommunity = route.name === 'community' && (!props.isGroup && props.isCommunity);
-  
+
   isActive.value = (matchPrivate || matchCommunity) && route.params.id === props.chat.id;
 }
 
 async function fetchInfo() {
-  if(props.chat.picture) {
+  if (props.chat.picture) {
     ChatPicture.value = props.chat.picture;
-  }
-  else if(props.chat.participants) {
-    if(props.chat.participants.length == 1 && !props.chat.isGroup && !props.chat.isCommunity) {
+  } else if (props.chat.participants) {
+    if (props.chat.participants.length === 1 && !props.chat.isGroup && !props.chat.isCommunity) {
       const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
       ChatPicture.value = userDoc.exists ? userDoc.data().imgURL : null;
-    }
-    else if(!props.chat.isGroup && !props.chat.isCommunity){
-      const otherUser = props.chat.participants.find((uid) => (uid !== auth.currentUser.uid));
+    } else if (!props.chat.isGroup && !props.chat.isCommunity) {
+      const otherUser = props.chat.participants.find((uid) => uid !== auth.currentUser.uid);
       const userDoc = await db.collection('users').doc(otherUser).get();
       ChatPicture.value = userDoc.exists ? userDoc.data().imgURL : null;
-    }
-    else {
-      if(props.chat.isGroup) {
-        ChatPicture.value = "https://i.ibb.co/bM6nqzt7/huggingavatar.png";
-      }
-      else if(props.chat.isCommunity) {
-        ChatPicture.value = "https://i.ibb.co/W4xnwhjx/communityavatar.png";
+    } else {
+      if (props.chat.isGroup) {
+        ChatPicture.value = 'https://i.ibb.co/bM6nqzt7/huggingavatar.png';
+      } else if (props.chat.isCommunity) {
+        ChatPicture.value = 'https://i.ibb.co/W4xnwhjx/communityavatar.png';
       }
     }
   }
 
   if (props.chat.name) {
     ChatName.value = props.chat.name;
-  }
-  else if (!props.isCommunity && !props.isGroup) {
+  } else if (!props.isCommunity && !props.isGroup) {
     if (Array.isArray(props.chat.participants)) {
-      if(props.chat.participants.length == 1 && !props.chat.isGroup && !props.chat.isCommunity) {
+      if (props.chat.participants.length === 1 && !props.chat.isGroup && !props.chat.isCommunity) {
         const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
-        ChatName.value = userDoc.exists ? userDoc.data().name : 'Unknown User';        
-      }
-      else{
-        const otherUser = props.chat.participants.find((uid) => (uid !== auth.currentUser.uid));
+        ChatName.value = userDoc.exists ? userDoc.data().name : 'Unknown User';
+      } else {
+        const otherUser = props.chat.participants.find((uid) => uid !== auth.currentUser.uid);
         const userDoc = await db.collection('users').doc(otherUser).get();
         ChatName.value = userDoc.exists ? userDoc.data().name : 'Unknown User';
       }
-    }
-    else {
+    } else {
       ChatName.value = 'Unknown User';
     }
   } else {
@@ -105,7 +100,6 @@ async function fetchInfo() {
   }
 
   if (props.chat.messages && props.chat.messages.length > 0) {
-    
     const messageSnapshot = await db
       .collection('messages')
       .where('chatId', '==', props.chat.id)
@@ -123,56 +117,69 @@ async function fetchInfo() {
   }
 }
 
+async function listenToNotifications() {
+  try {
+    const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
+    if (!userDoc.exists) return;
 
-let unsubscribeNotif = null;
-const hasUnread = ref(false);
-const lastUnreadType = ref(null);
+    const inbox = userDoc.data().Inbox || [];
+    const chatNotifications = inbox.filter((notif) => notif.chatId === props.chat.id && !notif.isRead);
 
-function listenToNotifications() {
-  if (unsubscribeNotif) unsubscribeNotif();
-
-  db.collection("notifications")
-    .where("user-id", "==", auth.currentUser.uid)
-    .where("source-id", "==", props.chat.id)
-    .where("is-read", "==", false)
-    .limit(1)
-    .get()
-    .then(snapshot => {
-      if (snapshot.empty) return;
-
-      unsubscribeNotif = db.collection("notifications")
-        .where("user-id", "==", auth.currentUser.uid)
-        .where("source-id", "==", props.chat.id)
-        .where("is-read", "==", false)
-        .orderBy("date", "desc")
-        .onSnapshot((snapshot) => {
-          hasUnread.value = !snapshot.empty;
-          if (!snapshot.empty) {
-            lastUnreadType.value = snapshot.docs[0].data().type;
-          } else {
-            lastUnreadType.value = null;
-          }
-        }, (error) => {
-          console.error("Notification listener error:", error);
-        });
-    })
-    .catch((error) => {
-      console.error("Error checking notifications collection:", error);
-    });
+    hasUnread.value = chatNotifications.length > 0;
+    if (hasUnread.value) {
+      lastUnreadType.value = chatNotifications[0].type; // Use the type of the most recent notification
+    } else {
+      lastUnreadType.value = null;
+    }
+  } catch (error) {
+    console.error('Error fetching notifications from Inbox:', error);
+  }
 }
 
 function redirectToChat() {
   if (props.chat.id === null) {
     return;
-  } else if (!props.isCommunity) {
+  }
+
+  // Reset mention notifications for this chat
+  resetMentionNotification();
+
+  if (!props.isCommunity) {
     router.push({ name: 'private', params: { id: props.chat.id } });
   } else if (props.isCommunity) {
     router.push({ name: 'community', params: { id: props.chat.id } });
   }
 }
 
+async function resetMentionNotification() {
+  try {
+    const userRef = db.collection('users').doc(auth.currentUser.uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) return;
+
+    const inbox = userDoc.data().Inbox || [];
+    const updatedInbox = inbox.map((notif) => {
+      if (notif.chatId === props.chat.id && notif.type === 'mention' && !notif.isRead) {
+        return { ...notif, isRead: true }; // Mark the mention notification as read
+      }
+      return notif;
+    });
+
+    await userRef.update({ Inbox: updatedInbox });
+
+    // Update local state
+    hasUnread.value = updatedInbox.some((notif) => notif.chatId === props.chat.id && !notif.isRead);
+    lastUnreadType.value = hasUnread.value
+      ? updatedInbox.find((notif) => notif.chatId === props.chat.id && !notif.isRead)?.type
+      : null;
+  } catch (error) {
+    console.error('Error resetting mention notification:', error);
+  }
+}
+
 async function togglePin() {
-  if(!props.chat.id) return;
+  if (!props.chat.id) return;
 
   const userRef = db.collection('users').doc(auth.currentUser.uid);
   const favoritesRef = userRef.collection('favorites');
@@ -189,17 +196,13 @@ async function togglePin() {
 onMounted(() => {
   checkActive();
   fetchInfo();
-  if(props.chat.id){
-    listenToNotifications();
-  }
+  listenToNotifications();
   checkIfPinned();
 });
 
 watch(() => router.currentRoute.value, () => {
   checkActive();
-  if(props.chat.id){
-    listenToNotifications();
-  }
+  listenToNotifications();
 });
 
 async function checkIfPinned() {

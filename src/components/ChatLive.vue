@@ -603,7 +603,8 @@ const createNewMessageNotification = async (newMessage, messageId) => {
       type: 'message',
       timestamp: new Date(),
       senderId: currentUserId,
-      chatId: props.chat.id
+      chatId: props.chat.id,
+      value: newMessage,
     }
 
     // the msg should be sent as a notif to all users in the props.chat.participants
