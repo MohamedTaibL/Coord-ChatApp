@@ -1,9 +1,11 @@
 # app
+First of all here is a direct firebase hosted link to the app: https://chat-app-2e99b.web.app 
+
 
 ## contribitors:
-- mohamed taib lkanit : @MohamedTaibL
-- mohammed khatiri : @Mokhatiri
-- nassim lazrek : @1kiroorik1
+- Mohamed Taib LKANIT : @MohamedTaibL
+- Mohammed Khatiri : @Mokhatiri
+- Nassim Lazrek : @1kiroorik1
 
 ## Project setup
 ```
