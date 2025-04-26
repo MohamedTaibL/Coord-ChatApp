@@ -1,13 +1,13 @@
 <template>
-  <div :class="['chat-card', { active: isActive || chat.id == null }, {invite: isInvite}]" ref="chatCard" @click="redirectToChat">
+  <div :class="['chat-card', { active: isActive || chat.id == null }, { invite: isInvite }]" ref="chatCard" @click="redirectToChat">
     <img :src="ChatPicture || 'https://www.gravatar.com/avatar/?d=mp'" class="avatar" />
     <div class="status-dot" :class="{ online: isOnline }" v-if="!isGroup && !isCommunity"></div>
     <div class="chat-details">
       <div>
         <strong>{{ ChatName }}</strong>
         <span v-if="hasUnread">
-          <span v-if="lastUnreadType === 'mention'" class="mention-badge">@</span>
-          <span v-else class="unread-dot"></span>
+          <span v-if="mentionCount > 0" class="mention-badge">@{{ mentionCount }}</span>
+          <span v-if="messageCount > 0" class="unread-dot"> {{ messageCount }}</span>
         </span>
       </div>
       <p>{{ LastMessage || 'checking...' }}</p>
@@ -22,7 +22,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { defineProps } from 'vue';
 import { auth, db, useUserPresence } from '@/Firebase/config';
@@ -42,7 +42,8 @@ const isActive = ref(false);
 const chatCard = ref(null);
 const isPinned = ref(false);
 const hasUnread = ref(false); // Tracks if there are unread notifications
-const lastUnreadType = ref(null); // Tracks the type of the last unread notification
+const messageCount = ref(0); // Tracks the total number of unread notifications
+const mentionCount = ref(0); // Tracks the number of mentions
 const otherUser = computed(() => {
   if (!props.isGroup && !props.isCommunity && Array.isArray(props.chat.participants)) {
     if (props.chat.participants.length !== 1) return props.chat.participants.find((uid) => uid !== auth.currentUser.uid);
@@ -51,6 +52,8 @@ const otherUser = computed(() => {
   return null;
 });
 const isOnline = useUserPresence(otherUser.value);
+
+let unsubscribeInbox = null; // To store the unsubscribe function for the snapshot listener
 
 function checkActive() {
   const route = router.currentRoute.value;
@@ -117,32 +120,27 @@ async function fetchInfo() {
   }
 }
 
-async function listenToNotifications() {
-  try {
-    const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
-    if (!userDoc.exists) return;
+function listenToNotifications() {
+  const userRef = db.collection('users').doc(auth.currentUser.uid);
 
-    const inbox = userDoc.data().Inbox || [];
-    const chatNotifications = inbox.filter((notif) => notif.chatId === props.chat.id && !notif.isRead);
+  unsubscribeInbox = userRef.onSnapshot((doc) => {
+    if (!doc.exists) return;
 
+    const inbox = doc.data().Inbox || [];
+    const chatNotifications = inbox.filter((notif) => notif.chatId === props.chat.id);
+    const numberOfMessages = chatNotifications.filter((notif) => notif.type === 'message').length;
+    const numberOfMentions = chatNotifications.filter((notif) => notif.type === 'mention').length;
+    
     hasUnread.value = chatNotifications.length > 0;
-    if (hasUnread.value) {
-      lastUnreadType.value = chatNotifications[0].type; // Use the type of the most recent notification
-    } else {
-      lastUnreadType.value = null;
-    }
-  } catch (error) {
-    console.error('Error fetching notifications from Inbox:', error);
-  }
+    messageCount.value = numberOfMessages; // Update the notification count
+    mentionCount.value = numberOfMentions; // Update the mention count
+  });
 }
 
 function redirectToChat() {
   if (props.chat.id === null) {
     return;
   }
-
-  // Reset mention notifications for this chat
-  resetMentionNotification();
 
   if (!props.isCommunity) {
     router.push({ name: 'private', params: { id: props.chat.id } });
@@ -151,32 +149,23 @@ function redirectToChat() {
   }
 }
 
-async function resetMentionNotification() {
-  try {
-    const userRef = db.collection('users').doc(auth.currentUser.uid);
-    const userDoc = await userRef.get();
+async function checkIfPinned() {
+  if (!props.chat.id) {
+    return;
+  }
 
-    if (!userDoc.exists) return;
+  const userRef = db.collection('users').doc(auth.currentUser.uid);
+  const favoritesRef = userRef.collection('favorites');
+  const snapshot = await favoritesRef.doc(props.chat.id).get();
 
-    const inbox = userDoc.data().Inbox || [];
-    const updatedInbox = inbox.map((notif) => {
-      if (notif.chatId === props.chat.id && notif.type === 'mention' && !notif.isRead) {
-        return { ...notif, isRead: true }; // Mark the mention notification as read
-      }
-      return notif;
-    });
-
-    await userRef.update({ Inbox: updatedInbox });
-
-    // Update local state
-    hasUnread.value = updatedInbox.some((notif) => notif.chatId === props.chat.id && !notif.isRead);
-    lastUnreadType.value = hasUnread.value
-      ? updatedInbox.find((notif) => notif.chatId === props.chat.id && !notif.isRead)?.type
-      : null;
-  } catch (error) {
-    console.error('Error resetting mention notification:', error);
+  if (snapshot.exists) {
+    isPinned.value = true;
+  } else {
+    isPinned.value = false;
   }
 }
+
+
 
 async function togglePin() {
   if (!props.chat.id) return;
@@ -200,24 +189,15 @@ onMounted(() => {
   checkIfPinned();
 });
 
-watch(() => router.currentRoute.value, () => {
-  checkActive();
-  listenToNotifications();
+onUnmounted(() => {
+  if (unsubscribeInbox) {
+    unsubscribeInbox(); // Clean up the snapshot listener
+  }
 });
 
-async function checkIfPinned() {
-  if (!props.chat.id) {
-    return;
-  }
-
-  const userRef = db.collection('users').doc(auth.currentUser.uid);
-  const favoritesRef = userRef.collection('favorites');
-  const snapshot = await favoritesRef.doc(props.chat.id).get();
-
-  if (snapshot.exists) {
-    isPinned.value = true;
-  }
-}
+watch(() => router.currentRoute.value, () => {
+  checkActive();
+});
 </script>
 
 <style scoped>
@@ -277,17 +257,8 @@ async function checkIfPinned() {
   box-shadow: 0 0 0 2px #4d94ff;
 }
 
-.unread-dot {
-  width: 10px;
-  height: 10px;
+.notification-badge {
   background-color: #ff4d4d;
-  border-radius: 50%;
-  display: inline-block;
-  margin-left: 0.5rem;
-}
-
-.mention-badge {
-  background-color: #8e44ad;
   color: white;
   font-size: 0.75rem;
   font-weight: 600;
@@ -338,18 +309,46 @@ async function checkIfPinned() {
   color: #cccccc; /* Default color for non-pinned icon */
 }
 
-.chat-card.invite {
-  background-color: rgba(211, 211, 4, 0.46); /* Transparent yellow */
-  border: 1px solid rgba(232, 232, 2, 0.4);
+.mention-badge {
+  background-color: #ffcc00; /* Bright yellow for mentions */
+  color: #1a1a1a; /* Dark text for contrast */
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 0.5rem;
+  display: inline-block;
+  line-height: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  animation: pulse 1.5s infinite; /* Subtle pulsing effect */
 }
 
-.chat-card.invite:hover {
-  background-color: rgba(255, 255, 0, 0.574);
+.unread-dot {
+  background-color: #ff4d4d; /* Bright red for unread messages */
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 0.5rem;
+  display: inline-block;
+  line-height: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.chat-card.invite.active {
-  background-color: rgba(255, 215, 0, 0.4); /* Slightly deeper yellow */
-  box-shadow: 0 0 0 2px rgba(255, 217, 0, 0.87);
+/* Add a pulsing animation for the mention badge */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
 }
-
 </style>
