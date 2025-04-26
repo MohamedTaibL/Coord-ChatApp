@@ -13,7 +13,7 @@
     </div>
     <input class="chat-search" type="text" v-model="searchQuery" placeholder="search the chat ..." />
     <div style="display: flex; flex-direction: row; gap: 0.5rem">
-      <div class="join-button" v-if="!Permitted" @click="joinCommunity">join now</div>
+      <div class="join-button" v-if="!Permitted" @click="joinCommunity">Join to get notifications!</div>
       <div class="menu-wrapper" @mouseleave="startCloseTimer" @mouseenter="clearCloseTimer">
         <div class="filter-chat-icon" @click="toggleMenu">
           <i class="fa fa-ellipsis-v menu-icon"></i>

@@ -106,8 +106,9 @@
                 </div>
               </div>
               <div class="user-actions">
-                <button class="invite-btn" @click="invite(user.id)">
-                  Invite
+                <button class="invite-btn" @click="invite(user.id)" :disabled='invitedUsers.has(user.id)'>
+                    <i class="fa fa-user-plus"></i>
+                    {{ invitedUsers.has(user.id) ? 'Invited' : 'Invite' }}
                 </button>
               </div>
             </div>
@@ -143,6 +144,8 @@
     if (chat.value.isGroup) return "private";
     if (chat.value.isCommunity) return "community";
   });
+
+  const invitedUsers = ref(new Set());
   
   const chat = ref({
     id: null,
@@ -257,6 +260,7 @@
   };
   
   const invite = (userId) => {
+    invitedUsers.value.add(userId);
     db.collection("users").doc(userId).update({
       invitations: firebase.firestore.FieldValue.arrayUnion(chat.value.id)
     });
