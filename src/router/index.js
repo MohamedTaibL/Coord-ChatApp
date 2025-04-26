@@ -55,7 +55,13 @@ const routes = [
     path: '/editdetails/:id',
     name: 'editdetails',
     component: () => import('@/views/EditDetailsView.vue')
-  }
+  },
+  {
+  path: '/detailsview/:id',
+  name: 'detailsview',
+    component: () => import('@/views/DetailsView.vue')
+  },
+  
 ]
 
 const router = createRouter({

@@ -1,6 +1,6 @@
 <template>
   <div class="chat-bar">
-    <div class="user-info">
+    <div class="user-info" @click="Redirect">
       <img
         :src="chat ? (chat.picture ? chat.picture : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y') : defaultAvatar"
         class="avatar" />
@@ -39,6 +39,7 @@
 import { ref, watch, computed, onMounted } from 'vue';
 import { db, auth } from '@/Firebase/config';
 import firebase from 'firebase/app';
+import { useRouter } from 'vue-router';
 const props = defineProps({
   chat: Object,
   isPermited: Boolean
@@ -54,6 +55,7 @@ const isAdmin = computed(() => {
 });
 let closeTimeout = null;
 
+const router = useRouter()
 
 function toggleMenu() {
   showMenu.value = !showMenu.value;
@@ -101,6 +103,20 @@ function leave() {
   })
 
   Permitted.value = false;
+}
+
+const Redirect = () => {
+  if (props.chat.id === null) {
+    return;
+  }
+  else if (!props.chat.isCommunity && !props.chat.isGroup) {
+    const otherUserID = props.chat.participants.find((uid) => (uid !== auth.currentUser.uid));
+    router.push({ name: 'viewprofile', params: { id: otherUserID} });
+  }
+  else{
+    router.push({ name: 'detailsview', params: { id: props.chat.id } });
+
+  }
 }
 
 // Watch searchQuery and emit when it changes
@@ -214,6 +230,7 @@ onMounted(() => {
   align-items: center;
   margin-right: 1rem;
   position: relative;
+  cursor: pointer;
   /* Ensure status dot is positioned relative to this container */
 }
 
