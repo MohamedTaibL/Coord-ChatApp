@@ -83,9 +83,29 @@ const addUser = async () =>{
       username.value = "";
       return false;
     }
+    if (!email.value.endsWith("@um6p.ma")) {
+      alert("Only um6p email addresses are allowed.");
+      email.value = "";
+      return false;
+    }
+
+    const birthDate = new Date(date.value);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    if (age < 17) {
+      alert("You must be at least 17 years old to sign up.");
+      date.value = "";
+      return false;
+    }
+
   }
   
   catch(error){
+    console.log(error)
     alert("Connection error, please try again!")
     return false;
 
